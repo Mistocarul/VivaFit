@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const form = document.getElementById("registerForm");
+
+            form.addEventListener("submit", function(event) {
+                event.preventDefault(); // Previne trimiterea standard a formularului
+
+                // Creează un obiect FormData din formular
+                const formData = new FormData(form);
+
+                // Trimite datele formularului printr-o cerere AJAX
+                fetch('/api/auth/signup', {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Success:', data);
+                    // Poți adăuga aici cod pentru a arăta mesajul de succes utilizatorului
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    // Poți adăuga aici cod pentru a arăta mesajul de eroare utilizatorului
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+<h1>Register</h1>
+<form id="registerForm" enctype="multipart/form-data" method="post">
+    <label for="profilePicture">Profile Picture:</label>
+    <input type="file" id="profilePicture" name="profilePicture" required>
+
+    <label for="username">Username:</label>
+    <input type="text" id="username" name="username" required>
+
+    <label for="password">Password:</label>
+    <input type="password" id="password" name="password" required>
+
+    <label for="email">Email:</label>
+    <input type="email" id="email" name="email" required>
+
+    <label for="phoneNumber">Phone Number:</label>
+    <input type="text" id="phoneNumber" name="phoneNumber" required>
+
+    <label for="role">Role:</label>
+    <input type="text" id="role" name="role" required>
+
+    <button type="submit">Register</button>
+</form>
+</body>
+</html>

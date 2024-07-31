@@ -1,7 +1,8 @@
-package com.vivafit.vivafit.authentification.service;
+package com.vivafit.vivafit.authentification.services;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
@@ -63,7 +64,7 @@ public class JwtService {
     }
 
     private SecretKey getSignInKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(jwtSecretKey);
+        byte[] keyBytes = Decoders.BASE64URL.decode(jwtSecretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 

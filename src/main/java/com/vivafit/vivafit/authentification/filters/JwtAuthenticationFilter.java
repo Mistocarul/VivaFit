@@ -1,6 +1,6 @@
-package com.vivafit.vivafit.authentification.filter;
+package com.vivafit.vivafit.authentification.filters;
 
-import com.vivafit.vivafit.authentification.service.JwtService;
+import com.vivafit.vivafit.authentification.services.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,8 +42,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String token = authorizationHeader.substring(7);
             String username = jwtService.extractUsername(token);
+            String role = jwtService.extractRole(token);
             Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-            if (username != null && authentication == null) {
+            if (username != null && role != null && authentication == null) {
                 UserDetails userDetails = this.userDetailsService.loadUserByUsername(username);
                 if (jwtService.isTokenValid(token, userDetails)) {
                     UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken =

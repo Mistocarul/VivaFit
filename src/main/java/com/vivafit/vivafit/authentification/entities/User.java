@@ -45,11 +45,11 @@ public class User implements UserDetails {
     private String role;
 
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private Date createdAt;
 
     @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false, insertable = false)
+    @Column(name = "updated_at", nullable = false)
     private Date updatedAt;
 
     @Override
@@ -76,4 +76,5 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return true;
     }
+
 }
