@@ -8,13 +8,21 @@ import com.vivafit.vivafit.authentification.services.AuthenticationService;
 import com.vivafit.vivafit.authentification.services.JwtService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RequestMapping("/api/auth")
 @RestController
+@Validated
 public class AuthenticationController {
     @Autowired
     private JwtService jwtService;
@@ -22,17 +30,14 @@ public class AuthenticationController {
     private AuthenticationService authenticationService;
 
     @PostMapping("/signup")
-    public ResponseEntity<?> register(@Valid @ModelAttribute RegisterUserDto registerUserDto, BindingResult bindingResult) {
-        if (bindingResult.hasErrors()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(bindingResult.getAllErrors());
-        }
+    public ResponseEntity<User> register(@Valid @ModelAttribute RegisterUserDto registerUserDto) {
         //System.out.println("RegisterUserDto: " + registerUserDto);
         User user = authenticationService.registerUser(registerUserDto);
         return ResponseEntity.ok(user);
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto, BindingResult bindingResult){
         //System.out.println("LoginUserDto: " + loginUserDto);
         User user = authenticationService.loginUser(loginUserDto);
         String token = jwtService.generateToken(user);

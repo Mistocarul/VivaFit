@@ -28,8 +28,8 @@ public class SecurityConfiguration {
                 .cors(withDefaults())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/register.html").permitAll()
-                        .requestMatchers("/login.html").permitAll()
+                        .requestMatchers("/register.html", "/login.html").permitAll()
+                        .requestMatchers("/api/users/all-users").hasAuthority("ADMIN")
                         .anyRequest().authenticated()
                 ) //configureaza autorizarea requesturilor
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //configureaza managementul sesiunilor sa depinda de JWT

@@ -58,11 +58,11 @@
 <div class="login-container">
     <h2>Login</h2>
     <form id="loginForm">
-        <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
+        <label for="identifier">Identifier:</label>
+        <input type="text" id="identifier" name="identifier">
 
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
+        <input type="password" id="password" name="password">
 
         <button type="submit">Login</button>
     </form>
@@ -87,18 +87,19 @@
             }
         })
         .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Success:', data);
-            document.getElementById('error-message').textContent = ''; // Resetează mesajul de eroare
-            document.getElementById('success-message').textContent = `Login successful! Token: ${data.token}`;
+            return response.json().then(data => {
+                if (!response.ok) {
+                    console.error('Error:', data);
+                    document.getElementById('error-message').textContent = `Login failed: ${data.message || 'Unknown error'}`;
+                } else {
+                    console.log('Success:', data);
+                    document.getElementById('error-message').textContent = ''; // Resetează mesajul de eroare
+                    document.getElementById('success-message').textContent = `Login successful! Token: ${data.token}`;
+                }
+            });
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Network Error:', error);
             document.getElementById('error-message').textContent = 'Login failed. Please check your credentials and try again.';
         });
     });

@@ -3,12 +3,15 @@ package com.vivafit.vivafit.authentification.services;
 import com.vivafit.vivafit.authentification.dto.LoginUserDto;
 import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
 import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -28,6 +31,9 @@ public class AuthenticationService {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Value("${upload.folder.users-photos.path}")
+    private String uploadFolderUsersPhotosPath;
+
     public User registerUser(RegisterUserDto registerUserDto) {
         MultipartFile profilePicture = registerUserDto.getProfilePicture();
         String profilePicturePath = null;
@@ -38,16 +44,18 @@ public class AuthenticationService {
                 if(originalFilename != null && originalFilename.contains(".")){
                     extension = originalFilename.substring(originalFilename.lastIndexOf("."));
                 }
+                if (!extension.equals(".jpg") && !extension.equals(".jpeg") && !extension.equals(".png") &&
+                !extension.equals(".JPG") && !extension.equals(".JPEG") && !extension.equals(".PNG") && !extension.equals(".gif") && !extension.equals(".GIF")) {
+                    throw new InvalidFileTypeException("Profile picture must be an image file with extension .jpg, .jpeg, .png, or .gif");
+                }
                 String filename = StringUtils.cleanPath(registerUserDto.getUsername() + extension);
-                String uploadFolder = "C:/Users/Paul/Desktop/VivaFit/users-photos/";
+                String uploadFolder = uploadFolderUsersPhotosPath;
                 Path uploadFolderPath = Paths.get(uploadFolder);
                 if(!Files.exists(uploadFolderPath)){
                     try {
                         Files.createDirectories(uploadFolderPath);
                     } catch (IOException e) {
-                        System.err.println("Failed to create directory: " + uploadFolderPath.toString());
-                        e.printStackTrace();
-                        throw new RuntimeException("Failed to create directory", e);
+                        throw new RuntimeException("Failed to create directory for users photos", e);
                     }
                 }
                 Path filePath = uploadFolderPath.resolve(filename);
@@ -56,7 +64,9 @@ public class AuthenticationService {
             } catch (IOException exception){
                 throw new RuntimeException("Failed to upload profile picture", exception);
             }
-
+        }
+        else{
+            profilePicturePath = uploadFolderUsersPhotosPath + "/default.png";
         }
         User user = new User();
         user.setProfilePicture(profilePicturePath);
@@ -69,12 +79,24 @@ public class AuthenticationService {
     }
 
     public User loginUser(LoginUserDto loginUserDto) {
+        String identifier = loginUserDto.getIdentifier();
+        User user = null;
+        if (identifier.contains("@")){
+            user = userRepository
+                    .findByEmail(identifier)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + identifier));
+        }
+        else{
+            user = userRepository
+                    .findByUsername(identifier)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + identifier));
+        }
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        loginUserDto.getUsername(),
+                        user.getUsername(),
                         loginUserDto.getPassword()
                 )
         );
-        return userRepository.findByUsername(loginUserDto.getUsername()).orElseThrow();
+        return user;
     }
 }
