@@ -6,6 +6,7 @@ import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.authentification.services.AuthenticationService;
 import com.vivafit.vivafit.authentification.services.JwtService;
+import com.vivafit.vivafit.authentification.services.TokenManagementService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
@@ -28,6 +29,8 @@ public class AuthenticationController {
     private JwtService jwtService;
     @Autowired
     private AuthenticationService authenticationService;
+    @Autowired
+    private TokenManagementService tokenManagementService;
 
     @PostMapping("/signup")
     public ResponseEntity<User> register(@Valid @ModelAttribute RegisterUserDto registerUserDto) {
@@ -40,7 +43,13 @@ public class AuthenticationController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto, BindingResult bindingResult){
         //System.out.println("LoginUserDto: " + loginUserDto);
         User user = authenticationService.loginUser(loginUserDto);
+        String existingToken = tokenManagementService.getToken(user.getUsername());
+        if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
+            tokenManagementService.unregisterToken(user.getUsername());
+            tokenManagementService.notifyUserOfDesconnection(user.getUsername());
+        }
         String token = jwtService.generateToken(user);
+        tokenManagementService.registerToken(user.getUsername(), token);
         //System.out.println("Token: " + token);
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setToken(token);

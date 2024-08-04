@@ -88,7 +88,6 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
         problemDetail.setProperty("errors", errors);
-
         return problemDetail;
     }
 
