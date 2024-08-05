@@ -22,11 +22,19 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log('Success:', data);
-                    // Poți adăuga aici cod pentru a arăta mesajul de succes utilizatorului
+                    if (data.message) {
+                        // Arată mesajul de succes utilizatorului
+                        alert(data.message);
+                    }
+                    if (data.redirectPageUrl) {
+                        // Redirecționează utilizatorul către pagina de confirmare
+                        window.location.href = data.redirectPageUrl;
+                    }
                 })
                 .catch((error) => {
                     console.error('Error:', error);
-                    // Poți adăuga aici cod pentru a arăta mesajul de eroare utilizatorului
+                    // Arată mesajul de eroare utilizatorului
+                    alert('Registration failed. Please try again.');
                 });
             });
         });

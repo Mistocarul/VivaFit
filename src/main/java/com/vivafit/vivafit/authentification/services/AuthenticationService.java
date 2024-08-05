@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AuthenticationService {
@@ -30,6 +32,11 @@ public class AuthenticationService {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private AuthenticationManager authenticationManager;
+    @Autowired
+    private EmailService emailService;
+
+    private Map<String, User> pendingUsers = new ConcurrentHashMap<>();
+    private Map<String, Integer> confirmationCodes = new ConcurrentHashMap<>();
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -75,7 +82,36 @@ public class AuthenticationService {
         user.setEmail(registerUserDto.getEmail());
         user.setPhoneNumber(registerUserDto.getPhoneNumber());
         user.setRole(registerUserDto.getRole());
-        return userRepository.save(user);
+
+        emailService.setUser(user);
+        emailService.sendEmail();
+
+        pendingUsers.put(user.getUsername(), user);
+        confirmationCodes.put(user.getUsername(), emailService.getCode());
+        return user;
+        //return userRepository.save(user);
+    }
+
+    public User confirmUser(String username, int code){
+        Integer confirmationCode = confirmationCodes.get(username);
+        if(confirmationCode != null && confirmationCode == code){
+            User user = pendingUsers.get(username);
+            if(user != null){
+                userRepository.save(user);
+                pendingUsers.remove(username);
+                confirmationCodes.remove(username);
+                return user;
+            }
+        }
+        return null;
+    }
+
+    public void cancelRegistration(String username){
+        User user = pendingUsers.get(username);
+        if(user != null){
+            pendingUsers.remove(username);
+            confirmationCodes.remove(username);
+        }
     }
 
     public User loginUser(LoginUserDto loginUserDto) {

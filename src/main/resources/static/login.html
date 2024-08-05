@@ -102,14 +102,21 @@
                 console.log('Notification:', notification.body);
                 alert(notification.body);
                 disconnectWebSocket();
+            }, function(error) {
+                console.error('Subscription error:', error);
             });
+        }, function(error) {
+            console.error('Connection error:', error);
         });
     }
 
     function disconnectWebSocket() {
         if (stompClient !== null) {
-            stompClient.disconnect();
-            console.log('Disconnected from WebSocket');
+            stompClient.disconnect(() => {
+                console.log('Disconnected from WebSocket');
+            }, error => {
+                console.error('Disconnection error:', error);
+            });
         }
     }
 
@@ -124,20 +131,27 @@
 
         const identifier = jsonObject['identifier'];
 
-        fetch('api/auth/signin', {
+        fetch('http://localhost:9090/api/auth/signin', {
             method: 'POST',
             body: JSON.stringify(jsonObject),
             headers: {
                 'Content-Type': 'application/json'
             }
         })
-        .then(response => {
-            return response.json().then(data => {
-                if (data.token) {
-                    connectWebSocket(data.token, identifier);
-                }
-            });
-        })
+        .then(response => response.json().then(data => {
+            if (!response.ok) {
+                console.error('Error:', data);
+                document.getElementById('error-message').textContent = `Login failed: ${data.message || 'Unknown error'}`;
+            } else {
+                console.log('Success:', data);
+                document.getElementById('error-message').textContent = '';
+                document.getElementById('success-message').textContent = `Login successful! Token: ${data.token}`;
+                connectWebSocket(data.token, identifier);
+            }
+        }).catch(error => {
+            console.error('Error parsing JSON:', error);
+            document.getElementById('error-message').textContent = 'Error parsing response.';
+        }))
         .catch(error => {
             console.error('Network Error:', error);
             document.getElementById('error-message').textContent = 'Login failed. Please check your credentials and try again.';
