@@ -41,8 +41,6 @@ public class AuthenticationController {
         RegisterResponse registerResponse = new RegisterResponse();
         registerResponse.setMessage("Confirmation email sent. Please check your email for further instructions.");
         registerResponse.setUser(user);
-        String confirmPageUrl = "http://localhost:9090/confirm.html?username=" + user.getUsername();
-        registerResponse.setRedirectPageUrl(confirmPageUrl);
         return ResponseEntity.ok(registerResponse);
     }
 
@@ -62,7 +60,6 @@ public class AuthenticationController {
         }
         registerResponse.setMessage("User registered successfully");
         registerResponse.setUser(user);
-        registerResponse.setRedirectPageUrl("http://localhost:9090/login.html");
         return ResponseEntity.ok(registerResponse);
     }
 

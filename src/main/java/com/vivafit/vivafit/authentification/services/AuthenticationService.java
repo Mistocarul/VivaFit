@@ -4,6 +4,7 @@ import com.vivafit.vivafit.authentification.dto.LoginUserDto;
 import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
+import com.vivafit.vivafit.authentification.models.ConfirmationCode;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,6 +24,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,7 +41,7 @@ public class AuthenticationService {
     private EmailService emailService;
 
     private Map<String, User> pendingUsers = new ConcurrentHashMap<>();
-    private Map<String, Integer> confirmationCodes = new ConcurrentHashMap<>();
+    private Map<String, ConfirmationCode> confirmationCodes = new ConcurrentHashMap<>();
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -123,13 +126,22 @@ public class AuthenticationService {
         emailService.sendEmail();
 
         pendingUsers.put(user.getUsername(), user);
-        confirmationCodes.put(user.getUsername(), emailService.getCode());
+        confirmationCodes.put(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
         return user;
     }
 
     public User confirmUser(String username, int code){
-        Integer confirmationCode = confirmationCodes.get(username);
-        if(confirmationCode != null && confirmationCode == code){
+        ConfirmationCode confirmationCode = confirmationCodes.get(username);
+        if(confirmationCode == null){
+            return null;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (Duration.between(confirmationCode.getCreationTime(), now).toHours() > 3) {
+            confirmationCodes.remove(username);
+            return null;
+        }
+        Integer codeConfirmation = confirmationCode.getCode();
+        if(codeConfirmation != null && codeConfirmation == code){
             User user = pendingUsers.get(username);
             if(user != null){
                 userRepository.save(user);

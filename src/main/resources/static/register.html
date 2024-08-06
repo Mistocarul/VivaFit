@@ -22,13 +22,17 @@
                 .then(response => response.json())
                 .then(data => {
                     console.log('Success:', data);
+                    if (data.user) {
+                        localStorage.setItem('username', data.user.username);
+                    }
                     if (data.message) {
                         // Arată mesajul de succes utilizatorului
                         alert(data.message);
+                        window.location.href = '/confirm.html';
                     }
                     if (data.redirectPageUrl) {
                         // Redirecționează utilizatorul către pagina de confirmare
-                        window.location.href = data.redirectPageUrl;
+                        window.location.href = '/confirm.html';
                     }
                 })
                 .catch((error) => {

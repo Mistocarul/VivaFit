@@ -9,5 +9,4 @@ import lombok.Setter;
 public class RegisterResponse {
     private String message;
     private User user;
-    String redirectPageUrl;
 }

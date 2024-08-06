@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirm Registration</title>
     <style>
-        /* Stiluri similare */
         .error-message {
             color: red;
         }
@@ -19,10 +18,8 @@
     <h2>Confirm Registration</h2>
     <form id="confirmForm">
         <input type="hidden" id="username" name="username">
-
         <label for="code">Confirmation Code:</label>
         <input type="text" id="code" name="code" required>
-
         <button type="submit">Confirm</button>
         <button type="button" id="cancelButton">Cancel</button>
     </form>
@@ -32,8 +29,8 @@
 </div>
 
 <script>
-    // Setează username-ul din query string
-    const username = new URLSearchParams(window.location.search).get('username');
+    // Recuperați username-ul din localStorage
+    let username = localStorage.getItem('username');
     document.getElementById('username').value = username;
 
     document.getElementById('confirmForm').addEventListener('submit', function(event) {
@@ -70,13 +67,12 @@
             responseDetails.textContent = `
                 Message: ${data.message}
                 ${userDetails}
-                Redirect URL: ${data.redirectPageUrl}
             `;
 
             if (data.message.includes("User registered successfully")) {
                 document.getElementById('success-message').textContent = data.message;
                 setTimeout(() => {
-                    window.location.href = data.redirectPageUrl || 'login.html'; // Redirect to the provided URL or default to 'login.html'
+                    window.location.href = 'login.html'; // Redirect to the provided URL or default to 'login.html'
                 }, 3000);
             } else {
                 document.getElementById('error-message').textContent = data.message;
@@ -106,6 +102,7 @@
         .then(data => {
             if (data.message) {
                 document.getElementById('success-message').textContent = data.message;
+                localStorage.removeItem('username');
                 setTimeout(() => {
                     window.location.href = 'login.html'; // Redirecționează către login.html
                 }, 3000);
