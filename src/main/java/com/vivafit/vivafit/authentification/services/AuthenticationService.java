@@ -116,6 +116,9 @@ public class AuthenticationService {
         user.setPhoneNumber(registerUserDto.getPhoneNumber());
         user.setRole(registerUserDto.getRole());
 
+        pendingUsers.remove(user.getUsername());
+        confirmationCodes.remove(user.getUsername());
+
         emailService.setUser(user);
         emailService.sendEmail();
 
