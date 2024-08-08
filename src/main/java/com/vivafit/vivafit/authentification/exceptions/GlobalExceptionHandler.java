@@ -118,4 +118,13 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("message", exception.getMessage());
         return problemDetail;
     }
+
+    @ExceptionHandler(DataAlreadyExistsException.class)
+    public ProblemDetail handleDataAlreadyExistsException(DataAlreadyExistsException exception){
+        exception.printStackTrace();
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(409), exception.getMessage());
+        problemDetail.setTitle("Data Already Exists");
+        problemDetail.setProperty("message", exception.getMessage());
+        return problemDetail;
+    }
 }

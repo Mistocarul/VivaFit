@@ -26,13 +26,15 @@ public class EmailService {
     private String sendgridApiKey;
     @Value("${sendgrid.template.id}")
     private String sendgridTemplateId;
+    @Value("${sendgrid.from.email}")
+    private String fromEmail;
 
     public String sendEmail() {
         code = ThreadLocalRandom.current().nextInt(100000, 1000000);
-        String fromEmail = "pauleusebiubejan2003@gmail.com";
         String toEmail = user.getEmail();
+        String fromName = "VivaFit";
 
-        Email from = new Email(fromEmail);
+        Email from = new Email(fromEmail, fromName);
         Email to = new Email(toEmail);
         Mail mail = new Mail();
         mail.setFrom(from);

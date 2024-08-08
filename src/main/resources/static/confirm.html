@@ -22,6 +22,7 @@
         <input type="text" id="code" name="code" required>
         <button type="submit">Confirm</button>
         <button type="button" id="cancelButton">Cancel</button>
+        <button type="button" id="resendButton" disabled>Resend Email</button>
     </form>
     <div id="error-message" class="error-message"></div>
     <div id="success-message" class="success-message"></div>
@@ -32,6 +33,24 @@
     // Recuperați username-ul din localStorage
     let username = localStorage.getItem('username');
     document.getElementById('username').value = username;
+
+    // Funcție pentru dezactivarea temporară a butonului "Resend Email"
+    function startResendTimer() {
+        const resendButton = document.getElementById('resendButton');
+        let timer = 60; // 60 de secunde
+        resendButton.disabled = true;
+        resendButton.textContent = `Resend Email (${timer}s)`;
+
+        const interval = setInterval(() => {
+            timer--;
+            resendButton.textContent = `Resend Email (${timer}s)`;
+            if (timer === 0) {
+                clearInterval(interval);
+                resendButton.disabled = false;
+                resendButton.textContent = 'Resend Email';
+            }
+        }, 1000);
+    }
 
     document.getElementById('confirmForm').addEventListener('submit', function(event) {
         event.preventDefault();
@@ -84,7 +103,7 @@
         });
     });
 
-    // Adaugă un eveniment pentru butonul de Cancel
+    // Eveniment pentru butonul de Cancel
     document.getElementById('cancelButton').addEventListener('click', function() {
         const cancelData = {
             username: document.getElementById('username').value,
@@ -115,6 +134,37 @@
             document.getElementById('error-message').textContent = 'Failed to cancel. Please try again.';
         });
     });
+
+    // Eveniment pentru butonul de Resend Email
+    const resendData = {
+            username: document.getElementById('username').value,
+            code: 000000 // Codul de anulare este 000000
+        };
+    document.getElementById('resendButton').addEventListener('click', function() {
+        fetch('http://localhost:9090/api/auth/resend-email', {
+            method: 'POST',
+            body: JSON.stringify(resendData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                document.getElementById('success-message').textContent = 'Email resent successfully.';
+                startResendTimer(); // Începe temporizarea de 60 de secunde
+            } else {
+                document.getElementById('error-message').textContent = 'Failed to resend email. Please try again.';
+            }
+        })
+        .catch(error => {
+            console.error('Network Error:', error);
+            document.getElementById('error-message').textContent = 'Failed to resend email. Please try again.';
+        });
+    });
+
+    // Începe temporizarea când pagina este încărcată
+    startResendTimer();
 </script>
 </body>
 </html>

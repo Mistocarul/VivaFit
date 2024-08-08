@@ -3,6 +3,7 @@ package com.vivafit.vivafit.authentification.services;
 import com.vivafit.vivafit.authentification.dto.LoginUserDto;
 import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
 import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsException;
 import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
 import com.vivafit.vivafit.authentification.models.ConfirmationCode;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
@@ -50,6 +51,15 @@ public class AuthenticationService {
     private String uploadFolderUsersFoldersPath;
 
     public User registerUser(RegisterUserDto registerUserDto) {
+        if (userRepository.existsByUsername(registerUserDto.getUsername())) {
+            throw new DataAlreadyExistsException("Username is already taken");
+        }
+        if (userRepository.existsByEmail(registerUserDto.getEmail())) {
+            throw new DataAlreadyExistsException("Email is already registered");
+        }
+        if (userRepository.existsByPhoneNumber(registerUserDto.getPhoneNumber())) {
+            throw new DataAlreadyExistsException("Phone number is already registered");
+        }
         MultipartFile profilePicture = registerUserDto.getProfilePicture();
         String profilePicturePath = null;
         if(profilePicture != null && !profilePicture.isEmpty()){
@@ -130,13 +140,25 @@ public class AuthenticationService {
         return user;
     }
 
+    public User resendEmail(String username){
+        User user = pendingUsers.get(username);
+        if(user != null){
+            confirmationCodes.remove(username);
+            emailService.setUser(user);
+            emailService.sendEmail();
+            confirmationCodes.put(username, new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
+            return user;
+        }
+        return null;
+    }
+
     public User confirmUser(String username, int code){
         ConfirmationCode confirmationCode = confirmationCodes.get(username);
         if(confirmationCode == null){
             return null;
         }
         LocalDateTime now = LocalDateTime.now();
-        if (Duration.between(confirmationCode.getCreationTime(), now).toHours() > 3) {
+        if (Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30) {
             confirmationCodes.remove(username);
             return null;
         }

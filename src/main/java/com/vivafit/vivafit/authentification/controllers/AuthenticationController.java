@@ -63,6 +63,16 @@ public class AuthenticationController {
         return ResponseEntity.ok(registerResponse);
     }
 
+    @PostMapping("/resend-email")
+    public ResponseEntity<RegisterResponse> resendEmail(@Valid @RequestBody ConfirmationCodeDto confirmationCodeDto) {
+        String username = confirmationCodeDto.getUsername();
+        User user = authenticationService.resendEmail(username);
+        RegisterResponse registerResponse = new RegisterResponse();
+        registerResponse.setMessage("Confirmation email sent. Please check your email for further instructions.");
+        registerResponse.setUser(user);
+        return ResponseEntity.ok(registerResponse);
+    }
+
     @PostMapping("/cancel")
     public ResponseEntity<RegisterResponse> cancel(@Valid @RequestBody ConfirmationCodeDto confirmationCodeDto) {
         String username = confirmationCodeDto.getUsername();
