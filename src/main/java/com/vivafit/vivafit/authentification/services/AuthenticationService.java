@@ -43,6 +43,7 @@ public class AuthenticationService {
 
     private Map<String, User> pendingUsers = new ConcurrentHashMap<>();
     private Map<String, ConfirmationCode> confirmationCodes = new ConcurrentHashMap<>();
+    private Map<String, MultipartFile> profilePictures = new ConcurrentHashMap<>();
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -60,69 +61,8 @@ public class AuthenticationService {
         if (userRepository.existsByPhoneNumber(registerUserDto.getPhoneNumber())) {
             throw new DataAlreadyExistsException("Phone number is already registered");
         }
-        MultipartFile profilePicture = registerUserDto.getProfilePicture();
-        String profilePicturePath = null;
-        if(profilePicture != null && !profilePicture.isEmpty()){
-            try {
-                String originalFilename = profilePicture.getOriginalFilename();
-                String extension = "";
-                if(originalFilename != null && originalFilename.contains(".")){
-                    extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-                }
-                if (!extension.equals(".jpg") && !extension.equals(".jpeg") && !extension.equals(".png") &&
-                !extension.equals(".JPG") && !extension.equals(".JPEG") && !extension.equals(".PNG") && !extension.equals(".gif") && !extension.equals(".GIF")) {
-                    throw new InvalidFileTypeException("Profile picture must be an image file with extension .jpg, .jpeg, .png, or .gif");
-                }
-                String filename = StringUtils.cleanPath(registerUserDto.getUsername() + extension);
-                String uploadFolder = uploadFolderUsersPhotosPath;
-                Path uploadFolderPath = Paths.get(uploadFolder);
-                if(!Files.exists(uploadFolderPath)){
-                    try {
-                        Files.createDirectories(uploadFolderPath);
-                    } catch (IOException e) {
-                        throw new RuntimeException("Failed to create directory for users photos", e);
-                    }
-                }
-                Path filePath = uploadFolderPath.resolve(filename);
-                profilePicture.transferTo(filePath.toFile());
-                profilePicturePath = filePath.toString();
-            } catch (IOException exception){
-                throw new RuntimeException("Failed to upload profile picture", exception);
-            }
-        }
-        else{
-            String defaultProfilePicturePath = uploadFolderUsersPhotosPath + "/default.png";
-            File defaultImageFile = new File(defaultProfilePicturePath);
-            String extension = ".png";
-            String filename = StringUtils.cleanPath(registerUserDto.getUsername() + extension);
-            Path uploadFolderPath = Paths.get(uploadFolderUsersPhotosPath);
-            if (!Files.exists(uploadFolderPath)) {
-                try {
-                    Files.createDirectories(uploadFolderPath);
-                } catch (IOException e) {
-                    throw new RuntimeException("Failed to create directory for users photos", e);
-                }
-            }
-            Path newFilePath = uploadFolderPath.resolve(filename);
-            try {
-                Files.copy(defaultImageFile.toPath(), newFilePath, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to copy default profile picture", e);
-            }
-            profilePicturePath = newFilePath.toString();
-        }
-        String uploadUserFolder = uploadFolderUsersFoldersPath + "/" + registerUserDto.getUsername();
-        Path uploadUserFolderPath = Paths.get(uploadUserFolder);
-        if(!Files.exists(uploadUserFolderPath)){
-            try {
-                Files.createDirectories(uploadUserFolderPath);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to create directory for users folders", e);
-            }
-        }
 
         User user = new User();
-        user.setProfilePicture(profilePicturePath);
         user.setUsername(registerUserDto.getUsername());
         user.setPassword(passwordEncoder.encode(registerUserDto.getPassword()));
         user.setEmail(registerUserDto.getEmail());
@@ -131,12 +71,15 @@ public class AuthenticationService {
 
         pendingUsers.remove(user.getUsername());
         confirmationCodes.remove(user.getUsername());
+        profilePictures.remove(user.getUsername());
 
         emailService.setUser(user);
         emailService.sendEmail();
 
         pendingUsers.put(user.getUsername(), user);
         confirmationCodes.put(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
+        profilePictures.put(registerUserDto.getUsername(), registerUserDto.getProfilePicture());
+
         return user;
     }
 
@@ -166,13 +109,80 @@ public class AuthenticationService {
         if(codeConfirmation != null && codeConfirmation == code){
             User user = pendingUsers.get(username);
             if(user != null){
-                userRepository.save(user);
                 pendingUsers.remove(username);
                 confirmationCodes.remove(username);
+                MultipartFile profilePicture = profilePictures.get(username);
+                profilePictures.remove(username);
+                String profilePicturePath = saveProfilePicture(profilePicture, username);
+                user.setProfilePicture(profilePicturePath);
+                userRepository.save(user);
                 return user;
             }
         }
         return null;
+    }
+
+    private String saveProfilePicture(MultipartFile profilePicture, String username){
+        String profilePicturePath = null;
+        if(profilePicture != null && !profilePicture.isEmpty()){
+            try {
+                String originalFilename = profilePicture.getOriginalFilename();
+                String extension = "";
+                if(originalFilename != null && originalFilename.contains(".")){
+                    extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                }
+                if (!extension.equals(".jpg") && !extension.equals(".jpeg") && !extension.equals(".png") &&
+                !extension.equals(".JPG") && !extension.equals(".JPEG") && !extension.equals(".PNG") && !extension.equals(".gif") && !extension.equals(".GIF")) {
+                    throw new InvalidFileTypeException("Profile picture must be an image file with extension .jpg, .jpeg, .png, or .gif");
+                }
+                String filename = StringUtils.cleanPath(username + extension);
+                String uploadFolder = uploadFolderUsersPhotosPath;
+                Path uploadFolderPath = Paths.get(uploadFolder);
+                if(!Files.exists(uploadFolderPath)){
+                    try {
+                        Files.createDirectories(uploadFolderPath);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to create directory for users photos", e);
+                    }
+                }
+                Path filePath = uploadFolderPath.resolve(filename);
+                profilePicture.transferTo(filePath.toFile());
+                profilePicturePath = filePath.toString();
+            } catch (IOException exception){
+                throw new RuntimeException("Failed to upload profile picture", exception);
+            }
+        }
+        else{
+            String defaultProfilePicturePath = uploadFolderUsersPhotosPath + "/default.png";
+            File defaultImageFile = new File(defaultProfilePicturePath);
+            String extension = ".png";
+            String filename = StringUtils.cleanPath(username + extension);
+            Path uploadFolderPath = Paths.get(uploadFolderUsersPhotosPath);
+            if (!Files.exists(uploadFolderPath)) {
+                try {
+                    Files.createDirectories(uploadFolderPath);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to create directory for users photos", e);
+                }
+            }
+            Path newFilePath = uploadFolderPath.resolve(filename);
+            try {
+                Files.copy(defaultImageFile.toPath(), newFilePath, StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to copy default profile picture", e);
+            }
+            profilePicturePath = newFilePath.toString();
+        }
+        String uploadUserFolder = uploadFolderUsersFoldersPath + "/" + username;
+        Path uploadUserFolderPath = Paths.get(uploadUserFolder);
+        if(!Files.exists(uploadUserFolderPath)){
+            try {
+                Files.createDirectories(uploadUserFolderPath);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create directory for users folders", e);
+            }
+        }
+        return profilePicturePath;
     }
 
     public void cancelRegistration(String username){
@@ -180,14 +190,7 @@ public class AuthenticationService {
         if(user != null){
             pendingUsers.remove(username);
             confirmationCodes.remove(username);
-            Path profilePicturePath = Paths.get(user.getProfilePicture());
-            Path uploadUserFolderPath = Paths.get(uploadFolderUsersFoldersPath + "/" + user.getUsername());
-            try {
-                Files.delete(profilePicturePath);
-                Files.delete(uploadUserFolderPath);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to delete profile picture or user folder", e);
-            }
+            profilePictures.remove(username);
         }
     }
 
