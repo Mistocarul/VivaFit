@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update User Information</title>
+</head>
+<body>
+<h1>Update User Information</h1>
+
+<form id="update-user-form">
+    <label for="username">New Username:</label>
+    <input type="text" id="username" name="newUsername"><br><br>
+
+    <label for="email">New Email:</label>
+    <input type="email" id="email" name="newEmail"><br><br>
+
+    <label for="phone">New Phone Number:</label>
+    <input type="tel" id="phone" name="newPhoneNumber"><br><br>
+
+    <label for="profilePicture">New Profile Picture:</label>
+    <input type="file" id="profilePicture" name="newProfilePicture"><br><br>
+
+    <label for="currentPassword">Current Password (required):</label>
+    <input type="password" id="currentPassword" name="currentPassword" required><br><br>
+
+    <label for="newPassword">New Password:</label>
+    <input type="password" id="newPassword" name="newPassword"><br><br>
+
+    <button type="submit">Update</button>
+</form>
+
+<p id="response-message"></p>
+
+<script>
+    document.getElementById('update-user-form').addEventListener('submit', async function (event) {
+        event.preventDefault();
+
+        const formData = new FormData();
+        formData.append('newUsername', document.getElementById('username').value);
+        formData.append('newEmail', document.getElementById('email').value);
+        formData.append('newPhoneNumber', document.getElementById('phone').value);
+        formData.append('newProfilePicture', document.getElementById('profilePicture').files[0]);
+        formData.append('currentPassword', document.getElementById('currentPassword').value);
+        formData.append('newPassword', document.getElementById('newPassword').value);
+
+        // Retrieve the JWT token from localStorage or sessionStorage
+        const token = localStorage.getItem('jwtToken');
+
+        try {
+            const response = await fetch('http://localhost:9090/api/account/update-user', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+            document.getElementById('response-message').innerText = result.message;
+
+            if (response.ok) {
+                alert('User updated successfully!');
+            } else {
+                alert('Failed to update user: ' + result.message);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('response-message').innerText = 'An error occurred while updating user information.';
+        }
+    });
+</script>
+</body>
+</html>

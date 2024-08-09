@@ -146,6 +146,7 @@
                 console.log('Success:', data);
                 document.getElementById('error-message').textContent = '';
                 document.getElementById('success-message').textContent = `Login successful! Token: ${data.token}`;
+                localStorage.setItem('jwtToken', data.token);
                 connectWebSocket(data.token, identifier);
             }
         }).catch(error => {

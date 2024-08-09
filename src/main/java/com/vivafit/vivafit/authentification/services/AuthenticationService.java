@@ -43,13 +43,14 @@ public class AuthenticationService {
 
     private Map<String, User> pendingUsers = new ConcurrentHashMap<>();
     private Map<String, ConfirmationCode> confirmationCodes = new ConcurrentHashMap<>();
-    private Map<String, MultipartFile> profilePictures = new ConcurrentHashMap<>();
+    private Map<String, String> profilePictures = new ConcurrentHashMap<>();
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
-
     @Value("${upload.folder.users-folders.path}")
     private String uploadFolderUsersFoldersPath;
+    @Value("${upload.temporal.multipart.folder}")
+    private String uploadTemporalMultipartFolder;
 
     public User registerUser(RegisterUserDto registerUserDto) {
         if (userRepository.existsByUsername(registerUserDto.getUsername())) {
@@ -61,7 +62,6 @@ public class AuthenticationService {
         if (userRepository.existsByPhoneNumber(registerUserDto.getPhoneNumber())) {
             throw new DataAlreadyExistsException("Phone number is already registered");
         }
-
         User user = new User();
         user.setUsername(registerUserDto.getUsername());
         user.setPassword(passwordEncoder.encode(registerUserDto.getPassword()));
@@ -71,15 +71,32 @@ public class AuthenticationService {
 
         pendingUsers.remove(user.getUsername());
         confirmationCodes.remove(user.getUsername());
-        profilePictures.remove(user.getUsername());
 
         emailService.setUser(user);
         emailService.sendEmail();
 
         pendingUsers.put(user.getUsername(), user);
         confirmationCodes.put(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
-        profilePictures.put(registerUserDto.getUsername(), registerUserDto.getProfilePicture());
-
+        MultipartFile profilePicture = registerUserDto.getProfilePicture();
+        if (profilePicture != null && !profilePicture.isEmpty()) {
+            try {
+                Path temporalMultipartFolderPath = Paths.get(uploadTemporalMultipartFolder);
+                if (!Files.exists(temporalMultipartFolderPath)) {
+                    try {
+                        Files.createDirectories(temporalMultipartFolderPath);
+                    } catch (IOException e) {
+                        throw new RuntimeException("Failed to create directory for temporal multipart files", e);
+                    }
+                }
+                String filename = registerUserDto.getUsername() + "-temporal-" + profilePicture.getOriginalFilename();
+                Path filePath = temporalMultipartFolderPath.resolve(filename);
+                profilePicture.transferTo(filePath.toFile());
+                String temporalMultipartFilePath = filePath.toString();
+                profilePictures.put(registerUserDto.getUsername(), temporalMultipartFilePath);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to upload profile picture", e);
+            }
+        }
         return user;
     }
 
@@ -109,11 +126,11 @@ public class AuthenticationService {
         if(codeConfirmation != null && codeConfirmation == code){
             User user = pendingUsers.get(username);
             if(user != null){
+                String profilePictureTemporalPath = profilePictures.get(username);
                 pendingUsers.remove(username);
                 confirmationCodes.remove(username);
-                MultipartFile profilePicture = profilePictures.get(username);
                 profilePictures.remove(username);
-                String profilePicturePath = saveProfilePicture(profilePicture, username);
+                String profilePicturePath = saveProfilePicture(profilePictureTemporalPath, username);
                 user.setProfilePicture(profilePicturePath);
                 userRepository.save(user);
                 return user;
@@ -122,11 +139,15 @@ public class AuthenticationService {
         return null;
     }
 
-    private String saveProfilePicture(MultipartFile profilePicture, String username){
+    private String saveProfilePicture(String profilePicture, String username){
         String profilePicturePath = null;
-        if(profilePicture != null && !profilePicture.isEmpty()){
+        Path temporalMultipartFilePath = null;
+        if (profilePicture != null && !profilePicture.isEmpty()){
+            temporalMultipartFilePath = Paths.get(profilePicture);
+        }
+        if(temporalMultipartFilePath != null && Files.exists(temporalMultipartFilePath)){
             try {
-                String originalFilename = profilePicture.getOriginalFilename();
+                String originalFilename = temporalMultipartFilePath.getFileName().toString();
                 String extension = "";
                 if(originalFilename != null && originalFilename.contains(".")){
                     extension = originalFilename.substring(originalFilename.lastIndexOf("."));
@@ -146,7 +167,8 @@ public class AuthenticationService {
                     }
                 }
                 Path filePath = uploadFolderPath.resolve(filename);
-                profilePicture.transferTo(filePath.toFile());
+                Files.copy(temporalMultipartFilePath, filePath, StandardCopyOption.REPLACE_EXISTING);
+                Files.delete(temporalMultipartFilePath);
                 profilePicturePath = filePath.toString();
             } catch (IOException exception){
                 throw new RuntimeException("Failed to upload profile picture", exception);
@@ -173,7 +195,7 @@ public class AuthenticationService {
             }
             profilePicturePath = newFilePath.toString();
         }
-        String uploadUserFolder = uploadFolderUsersFoldersPath + "/" + username;
+        String uploadUserFolder = uploadFolderUsersFoldersPath + username;
         Path uploadUserFolderPath = Paths.get(uploadUserFolder);
         if(!Files.exists(uploadUserFolderPath)){
             try {
