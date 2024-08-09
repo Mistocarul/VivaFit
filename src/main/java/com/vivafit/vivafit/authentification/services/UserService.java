@@ -72,12 +72,13 @@ public class UserService {
             if(userRepository.existsByUsername(updateUserInformationsDto.getNewUsername())){
                 throw new DataAlreadyExistsException("Username is already taken");
             }
-            currentUser.setUsername(updateUserInformationsDto.getNewUsername());
             String oldUserFolder = uploadFolderUsersFoldersPath + currentUser.getUsername();
             String newUserFolder = uploadFolderUsersFoldersPath + updateUserInformationsDto.getNewUsername();
             Path oldUserFolderPath = Paths.get(oldUserFolder);
             Path newUserFolderPath = Paths.get(newUserFolder);
             try {
+                System.out.println("Path: " + oldUserFolderPath);
+                System.out.println("Path: " + newUserFolderPath);
                 Files.createDirectories(newUserFolderPath);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to create new user folder", e);
@@ -113,6 +114,7 @@ public class UserService {
                 }
                 currentUser.setProfilePicture(newProfilePicture);
             }
+            currentUser.setUsername(updateUserInformationsDto.getNewUsername());
         }
         if (updateUserInformationsDto.getNewPassword() != null && !updateUserInformationsDto.getNewPassword().isEmpty()) {
             currentUser.setPassword(passwordEncoder.encode(updateUserInformationsDto.getNewPassword()));

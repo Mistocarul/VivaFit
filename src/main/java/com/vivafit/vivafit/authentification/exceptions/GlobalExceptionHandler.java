@@ -127,4 +127,13 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("message", exception.getMessage());
         return problemDetail;
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleIllegalArgumentException(IllegalArgumentException exception){
+        exception.printStackTrace();
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(400), exception.getMessage());
+        problemDetail.setTitle("Invalid Argument");
+        problemDetail.setProperty("message", exception.getMessage());
+        return problemDetail;
+    }
 }
