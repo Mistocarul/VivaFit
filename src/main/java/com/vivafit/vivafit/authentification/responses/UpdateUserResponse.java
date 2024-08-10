@@ -11,4 +11,5 @@ public class UpdateUserResponse {
     private String message;
     private String token;
     private long expirationTime;
+    private String username;
 }

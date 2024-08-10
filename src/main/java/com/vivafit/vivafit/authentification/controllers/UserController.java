@@ -32,7 +32,8 @@ public class UserController {
     @Autowired
     private TokenManagementService tokenManagementService;
 
-    @GetMapping("/me")
+
+    @GetMapping("/user-informations")
     public ResponseEntity<User> authenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
@@ -78,7 +79,7 @@ public class UserController {
         }
         String token = jwtService.generateToken(updatedUser);
         tokenManagementService.registerToken(updatedUser.getUsername(), token);
-        UpdateUserResponse response = new UpdateUserResponse("User updated successfully", token, jwtService.getExpirationTime());
+        UpdateUserResponse response = new UpdateUserResponse("User updated successfully", token, jwtService.getExpirationTime(), updatedUser.getUsername());
         return ResponseEntity.ok(response);
     }
 }

@@ -8,4 +8,5 @@ import lombok.Setter;
 public class LoginResponse {
     private String token;
     private long expirationTime;
+    private String username;
 }

@@ -36,7 +36,6 @@ public class AuthenticationController {
 
     @PostMapping("/signup")
     public ResponseEntity<RegisterResponse> register(@Valid @ModelAttribute RegisterUserDto registerUserDto) {
-        //System.out.println("RegisterUserDto: " + registerUserDto);
         User user = authenticationService.registerUser(registerUserDto);
         RegisterResponse registerResponse = new RegisterResponse();
         registerResponse.setMessage("Confirmation email sent. Please check your email for further instructions.");
@@ -46,11 +45,8 @@ public class AuthenticationController {
 
     @PostMapping("/confirm")
     public ResponseEntity<RegisterResponse> confirm(@Valid @RequestBody ConfirmationCodeDto confirmationCodeDto) {
-        //System.out.println("Username: " + username + ", Code: " + code);
         String username = confirmationCodeDto.getUsername();
-        //System.out.println("Username: " + username);
         int code = confirmationCodeDto.getCode();
-        //System.out.println("Code: " + code);
         User user = authenticationService.confirmUser(username, code);
         RegisterResponse registerResponse = new RegisterResponse();
         if (user == null) {
@@ -85,8 +81,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto, BindingResult bindingResult){
-        //System.out.println("LoginUserDto: " + loginUserDto);
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto){
         User user = authenticationService.loginUser(loginUserDto);
         String existingToken = tokenManagementService.getToken(user.getUsername());
         if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
@@ -95,10 +90,10 @@ public class AuthenticationController {
         }
         String token = jwtService.generateToken(user);
         tokenManagementService.registerToken(user.getUsername(), token);
-        //System.out.println("Token: " + token);
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setToken(token);
         loginResponse.setExpirationTime(jwtService.getExpirationTime());
+        loginResponse.setUsername(user.getUsername());
         return ResponseEntity.ok(loginResponse);
     }
 }

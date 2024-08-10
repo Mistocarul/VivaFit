@@ -31,20 +31,29 @@
 </form>
 
 <p id="response-message"></p>
+<p id="notification" style="color: red; font-weight: bold;"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 
 <script>
+    let stompClient = null;
+
     document.getElementById('update-user-form').addEventListener('submit', async function (event) {
         event.preventDefault();
 
         const formData = new FormData();
+        const fileInput = document.getElementById('profilePicture');
+        if (fileInput.files.length > 0) {
+    formData.append('newProfilePicture', fileInput.files[0]);
+}
         formData.append('newUsername', document.getElementById('username').value);
         formData.append('newEmail', document.getElementById('email').value);
         formData.append('newPhoneNumber', document.getElementById('phone').value);
-        formData.append('newProfilePicture', document.getElementById('profilePicture').files[0]);
         formData.append('currentPassword', document.getElementById('currentPassword').value);
         formData.append('newPassword', document.getElementById('newPassword').value);
 
-        // Retrieve the JWT token from localStorage or sessionStorage
+        // Retrieve the JWT token from localStorage
         const token = localStorage.getItem('jwtToken');
 
         try {
@@ -61,7 +70,18 @@
 
             if (response.ok) {
                 alert('User updated successfully!');
-                localStorage.setItem('jwtToken', result.token);
+
+                // Deconectează de la vechiul WebSocket
+                disconnectWebSocket();
+
+                // Update the JWT token if it's returned from the server
+                if (result.token) {
+                    localStorage.setItem('jwtToken', result.token);
+                }
+
+                // Conectează-te la WebSocket folosind noul username
+                connectWebSocket(result.username);
+
             } else {
                 alert('Failed to update user: ' + result.message);
             }
@@ -69,6 +89,78 @@
             console.error('Error:', error);
             document.getElementById('response-message').innerText = 'An error occurred while updating user information.';
         }
+    });
+
+    // Function to connect to WebSocket
+    function connectWebSocket(username) {
+        const socket = new SockJS('http://localhost:9090/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function(frame) {
+            console.log('Connected: ' + frame);
+
+            stompClient.subscribe('/user/' + username + '/queue/disconnect', function(notification) {
+                document.getElementById('notification').textContent = notification.body;
+                console.log('Notification:', notification.body);
+                alert(notification.body);
+                disconnectWebSocket();
+            }, function(error) {
+                console.error('Subscription error:', error);
+            });
+        }, function(error) {
+            console.error('Connection error:', error);
+        });
+    }
+
+    // Function to disconnect from WebSocket
+    function disconnectWebSocket() {
+        if (stompClient !== null) {
+            stompClient.disconnect(() => {
+                console.log('Disconnected from WebSocket');
+            }, error => {
+                console.error('Disconnection error:', error);
+            });
+        }
+    }
+
+    // Fetch the authenticated user's information on page load
+    async function fetchUserInformation() {
+        const token = localStorage.getItem('jwtToken');
+
+        try {
+            const response = await fetch('http://localhost:9090/api/account/user-informations', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch user information');
+            }
+
+            const user = await response.json();
+            console.log('Authenticated User:', user);
+
+            document.getElementById('username').value = user.username;
+            document.getElementById('email').value = user.email;
+            document.getElementById('phone').value = user.phoneNumber;
+
+            // Connect to WebSocket using the username
+            connectWebSocket(user.username);
+
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('response-message').innerText = 'An error occurred while fetching user information.';
+        }
+    }
+
+    // Call the function to fetch user information when the page loads
+    window.onload = fetchUserInformation;
+
+    // Disconnect WebSocket when the user leaves the page
+    window.addEventListener('beforeunload', function() {
+        disconnectWebSocket();
     });
 </script>
 </body>
