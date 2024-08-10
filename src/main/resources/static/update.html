@@ -61,6 +61,7 @@
 
             if (response.ok) {
                 alert('User updated successfully!');
+                localStorage.setItem('jwtToken', result.token);
             } else {
                 alert('Failed to update user: ' + result.message);
             }

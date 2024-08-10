@@ -77,8 +77,6 @@ public class UserService {
             Path oldUserFolderPath = Paths.get(oldUserFolder);
             Path newUserFolderPath = Paths.get(newUserFolder);
             try {
-                System.out.println("Path: " + oldUserFolderPath);
-                System.out.println("Path: " + newUserFolderPath);
                 Files.createDirectories(newUserFolderPath);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to create new user folder", e);
@@ -168,5 +166,40 @@ public class UserService {
             }
         }
         return userRepository.save(currentUser);
+    }
+
+    public void validateUserUpdateInformations(UpdateUserInformationsDto updateUserInformationsDto) {
+        if(updateUserInformationsDto.getNewUsername() != null && !updateUserInformationsDto.getNewUsername().isEmpty()){
+            if(updateUserInformationsDto.getNewUsername().length() < 4 || updateUserInformationsDto.getNewUsername().length() > 24){
+                throw new IllegalArgumentException("Username must be between 4 and 24 characters");
+            }
+            if(updateUserInformationsDto.getNewUsername().contains("@")){
+                throw new IllegalArgumentException("Username must not contain '@'");
+            }
+        }
+        if(updateUserInformationsDto.getNewPassword() != null && !updateUserInformationsDto.getNewPassword().isEmpty()){
+            if(updateUserInformationsDto.getNewPassword().length() < 8){
+                throw new IllegalArgumentException("Password must be at least 8 characters long");
+            }
+            if(!updateUserInformationsDto.getNewPassword().matches("^(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}$")){
+                throw new IllegalArgumentException("Password must contain at least one uppercase letter, one digit, and one special character");
+            }
+        }
+        if(updateUserInformationsDto.getNewEmail() != null && !updateUserInformationsDto.getNewEmail().isEmpty()){
+            if(!updateUserInformationsDto.getNewEmail().matches("^(.+)@(.+)$")){
+                throw new IllegalArgumentException("The email address is invalid.");
+            }
+        }
+        if(updateUserInformationsDto.getNewPhoneNumber() != null && !updateUserInformationsDto.getNewPhoneNumber().isEmpty()){
+            if(!updateUserInformationsDto.getNewPhoneNumber().startsWith("+")){
+                throw new IllegalArgumentException("Phone number must start with '+' sign");
+            }
+            if(updateUserInformationsDto.getNewPhoneNumber().length() < 6 || updateUserInformationsDto.getNewPhoneNumber().length() > 15){
+                throw new IllegalArgumentException("Phone number must be between 6 and 15 characters");
+            }
+        }
+        if (updateUserInformationsDto.getCurrentPassword() == null || updateUserInformationsDto.getCurrentPassword().isEmpty()) {
+            throw new IllegalArgumentException("Password is required");
+        }
     }
 }
