@@ -14,4 +14,7 @@ public class LoginUserDto {
 
     @NotEmpty(message = "Password is required")
     private String password;
+
+    @NotEmpty(message = "Remember browser option is required")
+    private String rememberBrowser;
 }

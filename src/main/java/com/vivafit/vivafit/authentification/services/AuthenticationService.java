@@ -100,6 +100,18 @@ public class AuthenticationService {
         return user;
     }
 
+    public void sendEmailForNewBrowser(String username) {
+        User user = userRepository
+                .findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+        pendingUsers.remove(user.getUsername());
+        confirmationCodes.remove(user.getUsername());
+        emailService.setUser(user);
+        emailService.sendEmail();
+        pendingUsers.put(user.getUsername(), user);
+        confirmationCodes.put(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
+    }
+
     public User resendEmail(String username){
         User user = pendingUsers.get(username);
         if(user != null){
@@ -108,6 +120,28 @@ public class AuthenticationService {
             emailService.sendEmail();
             confirmationCodes.put(username, new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
             return user;
+        }
+        return null;
+    }
+
+    public User confirmSignIn(String username, int code) {
+        ConfirmationCode confirmationCode = confirmationCodes.get(username);
+        if (confirmationCode == null) {
+            return null;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30) {
+            confirmationCodes.remove(username);
+            return null;
+        }
+        Integer codeConfirmation = confirmationCode.getCode();
+        if (codeConfirmation != null && codeConfirmation == code) {
+            User user = pendingUsers.get(username);
+            if (user != null) {
+                pendingUsers.remove(username);
+                confirmationCodes.remove(username);
+                return user;
+            }
         }
         return null;
     }
@@ -216,6 +250,14 @@ public class AuthenticationService {
         }
     }
 
+    public void cancelSignIn(String username){
+        User user = pendingUsers.get(username);
+        if(user != null){
+            pendingUsers.remove(username);
+            confirmationCodes.remove(username);
+        }
+    }
+
     public User loginUser(LoginUserDto loginUserDto) {
         String identifier = loginUserDto.getIdentifier();
         User user = null;
@@ -235,6 +277,21 @@ public class AuthenticationService {
                         loginUserDto.getPassword()
                 )
         );
+        return user;
+    }
+
+    public User findUserByIdentifier(String identifier) {
+        User user = null;
+        if (identifier.contains("@")){
+            user = userRepository
+                    .findByEmail(identifier)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + identifier));
+        }
+        else{
+            user = userRepository
+                    .findByUsername(identifier)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + identifier));
+        }
         return user;
     }
 }

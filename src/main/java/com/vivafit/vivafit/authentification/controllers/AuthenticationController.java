@@ -6,9 +6,8 @@ import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.authentification.responses.RegisterResponse;
-import com.vivafit.vivafit.authentification.services.AuthenticationService;
-import com.vivafit.vivafit.authentification.services.JwtService;
-import com.vivafit.vivafit.authentification.services.TokenManagementService;
+import com.vivafit.vivafit.authentification.services.*;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.MethodParameter;
@@ -33,6 +32,10 @@ public class AuthenticationController {
     private AuthenticationService authenticationService;
     @Autowired
     private TokenManagementService tokenManagementService;
+    @Autowired
+    private ConnectionDetailsService connectionDetailsService;
+    @Autowired
+    private LoginAttemptCacheService loginAttemptCacheService;
 
     @PostMapping("/signup")
     public ResponseEntity<RegisterResponse> register(@Valid @ModelAttribute RegisterUserDto registerUserDto) {
@@ -81,8 +84,58 @@ public class AuthenticationController {
     }
 
     @PostMapping("/signin")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto){
-        User user = authenticationService.loginUser(loginUserDto);
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto, HttpServletRequest request) {
+        String ipAddress = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+
+        System.out.println("IP Address: " + ipAddress);
+        System.out.println("User Agent: " + userAgent);
+
+        String identifier = loginUserDto.getIdentifier();
+        LoginResponse loginResponse = new LoginResponse();
+        User possibleUser = authenticationService.findUserByIdentifier(identifier);
+        if (connectionDetailsService.isDifferentConnection(possibleUser.getUsername(), ipAddress, userAgent)) {
+            loginAttemptCacheService.storeLoginAttempt(possibleUser.getUsername(), loginUserDto);
+            authenticationService.sendEmailForNewBrowser(possibleUser.getUsername());
+        }
+        else{
+            User user = authenticationService.loginUser(loginUserDto);
+
+            String existingToken = tokenManagementService.getToken(user.getUsername());
+            if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
+                tokenManagementService.unregisterToken(user.getUsername());
+                tokenManagementService.notifyUserOfDesconnection(user.getUsername());
+            }
+            String token = jwtService.generateToken(user);
+            tokenManagementService.registerToken(user.getUsername(), token);
+
+            loginResponse.setToken(token);
+            loginResponse.setExpirationTime(jwtService.getExpirationTime());
+            loginResponse.setUsername(user.getUsername());
+            return ResponseEntity.ok(loginResponse);
+        }
+        loginResponse.setToken(null);
+        loginResponse.setExpirationTime(0);
+        loginResponse.setUsername(null);
+        return ResponseEntity.ok(loginResponse);
+    }
+
+    @PostMapping("/confirm-new-browser")
+    public ResponseEntity<LoginResponse> confirmNewBrowser(@Valid @RequestBody ConfirmationCodeDto confirmationCodeDto, HttpServletRequest request) {
+        String username = confirmationCodeDto.getUsername();
+        int code = confirmationCodeDto.getCode();
+        User user = authenticationService.confirmSignIn(username, code);
+        LoginResponse loginResponse = new LoginResponse();
+        if (user == null) {
+            loginResponse.setToken(null);
+            loginResponse.setExpirationTime(0);
+            loginResponse.setUsername(null);
+            return ResponseEntity.badRequest().body(loginResponse);
+        }
+        String ipAddress = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        LoginUserDto loginUserDto = loginAttemptCacheService.getLoginAttempt(username);
+        user = authenticationService.loginUser(loginUserDto);
         String existingToken = tokenManagementService.getToken(user.getUsername());
         if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
             tokenManagementService.unregisterToken(user.getUsername());
@@ -90,10 +143,26 @@ public class AuthenticationController {
         }
         String token = jwtService.generateToken(user);
         tokenManagementService.registerToken(user.getUsername(), token);
-        LoginResponse loginResponse = new LoginResponse();
+        loginAttemptCacheService.removeLoginAttempt(username);
+        if(loginUserDto.getRememberBrowser().contains("true")) {
+            connectionDetailsService.saveConnectionDetails(user.getUsername(), ipAddress, userAgent);
+        }
         loginResponse.setToken(token);
         loginResponse.setExpirationTime(jwtService.getExpirationTime());
         loginResponse.setUsername(user.getUsername());
+        return ResponseEntity.ok(loginResponse);
+    }
+
+    @PostMapping("/cancel-signin")
+    public ResponseEntity<LoginResponse> cancelSignIn(@Valid @RequestBody ConfirmationCodeDto confirmationCodeDto) {
+        String username = confirmationCodeDto.getUsername();
+        Integer code = confirmationCodeDto.getCode();
+        authenticationService.cancelSignIn(username);
+        loginAttemptCacheService.removeLoginAttempt(username);
+        LoginResponse loginResponse = new LoginResponse();
+        loginResponse.setToken(null);
+        loginResponse.setExpirationTime(0);
+        loginResponse.setUsername(null);
         return ResponseEntity.ok(loginResponse);
     }
 }
