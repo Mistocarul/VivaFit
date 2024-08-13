@@ -40,10 +40,8 @@ public class AuthenticationService {
     private AuthenticationManager authenticationManager;
     @Autowired
     private EmailService emailService;
-
-    private Map<String, User> pendingUsers = new ConcurrentHashMap<>();
-    private Map<String, ConfirmationCode> confirmationCodes = new ConcurrentHashMap<>();
-    private Map<String, String> profilePictures = new ConcurrentHashMap<>();
+    @Autowired
+    private ConfirmationAuthService confirmationAuthService;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -69,14 +67,15 @@ public class AuthenticationService {
         user.setPhoneNumber(registerUserDto.getPhoneNumber());
         user.setRole(registerUserDto.getRole());
 
-        pendingUsers.remove(user.getUsername());
-        confirmationCodes.remove(user.getUsername());
+        confirmationAuthService.removePendingUser(user.getUsername());
+        confirmationAuthService.removeConfirmationCode(user.getUsername());
 
         emailService.setUser(user);
         emailService.sendEmail();
 
-        pendingUsers.put(user.getUsername(), user);
-        confirmationCodes.put(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
+        confirmationAuthService.addPendingUser(user.getUsername(), user);
+        confirmationAuthService.addConfirmationCode(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
+
         MultipartFile profilePicture = registerUserDto.getProfilePicture();
         if (profilePicture != null && !profilePicture.isEmpty()) {
             try {
@@ -92,7 +91,7 @@ public class AuthenticationService {
                 Path filePath = temporalMultipartFolderPath.resolve(filename);
                 profilePicture.transferTo(filePath.toFile());
                 String temporalMultipartFilePath = filePath.toString();
-                profilePictures.put(registerUserDto.getUsername(), temporalMultipartFilePath);
+                confirmationAuthService.addProfilePicture(registerUserDto.getUsername(), temporalMultipartFilePath);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to upload profile picture", e);
             }
@@ -104,42 +103,42 @@ public class AuthenticationService {
         User user = userRepository
                 .findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
-        pendingUsers.remove(user.getUsername());
-        confirmationCodes.remove(user.getUsername());
+        confirmationAuthService.removePendingUser(user.getUsername());
+        confirmationAuthService.removeConfirmationCode(user.getUsername());
         emailService.setUser(user);
         emailService.sendEmail();
-        pendingUsers.put(user.getUsername(), user);
-        confirmationCodes.put(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
+        confirmationAuthService.addPendingUser(user.getUsername(), user);
+        confirmationAuthService.addConfirmationCode(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
     }
 
     public User resendEmail(String username){
-        User user = pendingUsers.get(username);
+        User user = confirmationAuthService.getPendingUser(username);
         if(user != null){
-            confirmationCodes.remove(username);
+            confirmationAuthService.removeConfirmationCode(username);
             emailService.setUser(user);
             emailService.sendEmail();
-            confirmationCodes.put(username, new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
+            confirmationAuthService.addConfirmationCode(username, new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
             return user;
         }
         return null;
     }
 
     public User confirmSignIn(String username, int code) {
-        ConfirmationCode confirmationCode = confirmationCodes.get(username);
+        ConfirmationCode confirmationCode = confirmationAuthService.getConfirmationCode(username);
         if (confirmationCode == null) {
             return null;
         }
         LocalDateTime now = LocalDateTime.now();
         if (Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30) {
-            confirmationCodes.remove(username);
+            confirmationAuthService.removeConfirmationCode(username);
             return null;
         }
         Integer codeConfirmation = confirmationCode.getCode();
         if (codeConfirmation != null && codeConfirmation == code) {
-            User user = pendingUsers.get(username);
+            User user = confirmationAuthService.getPendingUser(username);
             if (user != null) {
-                pendingUsers.remove(username);
-                confirmationCodes.remove(username);
+                confirmationAuthService.removePendingUser(username);
+                confirmationAuthService.removeConfirmationCode(username);
                 return user;
             }
         }
@@ -147,23 +146,23 @@ public class AuthenticationService {
     }
 
     public User confirmUser(String username, int code){
-        ConfirmationCode confirmationCode = confirmationCodes.get(username);
+        ConfirmationCode confirmationCode = confirmationAuthService.getConfirmationCode(username);
         if(confirmationCode == null){
             return null;
         }
         LocalDateTime now = LocalDateTime.now();
         if (Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30) {
-            confirmationCodes.remove(username);
+            confirmationAuthService.removePendingUser(username);
             return null;
         }
         Integer codeConfirmation = confirmationCode.getCode();
         if(codeConfirmation != null && codeConfirmation == code){
-            User user = pendingUsers.get(username);
+            User user = confirmationAuthService.getPendingUser(username);
             if(user != null){
-                String profilePictureTemporalPath = profilePictures.get(username);
-                pendingUsers.remove(username);
-                confirmationCodes.remove(username);
-                profilePictures.remove(username);
+                String profilePictureTemporalPath = confirmationAuthService.getProfilePicture(username);
+                confirmationAuthService.removePendingUser(username);
+                confirmationAuthService.removeConfirmationCode(username);
+                confirmationAuthService.removeProfilePicture(username);
                 String profilePicturePath = saveProfilePicture(profilePictureTemporalPath, username);
                 user.setProfilePicture(profilePicturePath);
                 userRepository.save(user);
@@ -242,19 +241,19 @@ public class AuthenticationService {
     }
 
     public void cancelRegistration(String username){
-        User user = pendingUsers.get(username);
+        User user = confirmationAuthService.getPendingUser(username);
         if(user != null){
-            pendingUsers.remove(username);
-            confirmationCodes.remove(username);
-            profilePictures.remove(username);
+            confirmationAuthService.removePendingUser(username);
+            confirmationAuthService.removeConfirmationCode(username);
+            confirmationAuthService.removeProfilePicture(username);
         }
     }
 
     public void cancelSignIn(String username){
-        User user = pendingUsers.get(username);
+        User user = confirmationAuthService.getPendingUser(username);
         if(user != null){
-            pendingUsers.remove(username);
-            confirmationCodes.remove(username);
+            confirmationAuthService.removePendingUser(username);
+            confirmationAuthService.removeConfirmationCode(username);
         }
     }
 
