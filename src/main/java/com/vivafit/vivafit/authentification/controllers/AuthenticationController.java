@@ -1,9 +1,11 @@
 package com.vivafit.vivafit.authentification.controllers;
 
 import com.vivafit.vivafit.authentification.dto.ConfirmationCodeDto;
+import com.vivafit.vivafit.authentification.dto.ForgotPaswordDto;
 import com.vivafit.vivafit.authentification.dto.LoginUserDto;
 import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
 import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.authentification.responses.RegisterResponse;
 import com.vivafit.vivafit.authentification.services.*;
@@ -164,5 +166,14 @@ public class AuthenticationController {
         loginResponse.setExpirationTime(0);
         loginResponse.setUsername(null);
         return ResponseEntity.ok(loginResponse);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<GeneralApiResponse> forgotPassword(@Valid @RequestBody ForgotPaswordDto forgotPaswordDto) {
+        String email = forgotPaswordDto.getEmail();
+        authenticationService.forgotPassword(email);
+        GeneralApiResponse generalApiResponse = new GeneralApiResponse();
+        generalApiResponse.setMessage("Password reset email sent. Please check your email for further instructions.");
+        return ResponseEntity.ok(generalApiResponse);
     }
 }

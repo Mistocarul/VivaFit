@@ -2,10 +2,12 @@ package com.vivafit.vivafit.authentification.services;
 
 import com.vivafit.vivafit.authentification.dto.LoginUserDto;
 import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
+import com.vivafit.vivafit.authentification.entities.PasswordResetToken;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsException;
 import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
 import com.vivafit.vivafit.authentification.models.ConfirmationCode;
+import com.vivafit.vivafit.authentification.repositories.PasswordResetTokenRepository;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +30,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -42,6 +45,8 @@ public class AuthenticationService {
     private EmailService emailService;
     @Autowired
     private ConfirmationAuthService confirmationAuthService;
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -49,6 +54,8 @@ public class AuthenticationService {
     private String uploadFolderUsersFoldersPath;
     @Value("${upload.temporal.multipart.folder}")
     private String uploadTemporalMultipartFolder;
+    @Value("${server.link.reset-password}")
+    private String resetPasswordLink;
 
     public User registerUser(RegisterUserDto registerUserDto) {
         if (userRepository.existsByUsername(registerUserDto.getUsername())) {
@@ -71,6 +78,7 @@ public class AuthenticationService {
         confirmationAuthService.removeConfirmationCode(user.getUsername());
 
         emailService.setUser(user);
+        emailService.setWhatSituation(true);
         emailService.sendEmail();
 
         confirmationAuthService.addPendingUser(user.getUsername(), user);
@@ -106,6 +114,7 @@ public class AuthenticationService {
         confirmationAuthService.removePendingUser(user.getUsername());
         confirmationAuthService.removeConfirmationCode(user.getUsername());
         emailService.setUser(user);
+        emailService.setWhatSituation(true);
         emailService.sendEmail();
         confirmationAuthService.addPendingUser(user.getUsername(), user);
         confirmationAuthService.addConfirmationCode(user.getUsername(), new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
@@ -116,6 +125,7 @@ public class AuthenticationService {
         if(user != null){
             confirmationAuthService.removeConfirmationCode(username);
             emailService.setUser(user);
+            emailService.setWhatSituation(true);
             emailService.sendEmail();
             confirmationAuthService.addConfirmationCode(username, new ConfirmationCode(emailService.getCode(), LocalDateTime.now()));
             return user;
@@ -292,5 +302,22 @@ public class AuthenticationService {
                     .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + identifier));
         }
         return user;
+    }
+
+    public void forgotPassword(String email){
+        User user = userRepository
+                .findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        String token = UUID.randomUUID().toString();
+        LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(30);
+        PasswordResetToken passwordResetToken = new PasswordResetToken();
+        passwordResetToken.setToken(token);
+        passwordResetToken.setUser(user);
+        passwordResetToken.setExpiryDate(expiryDate);
+        passwordResetTokenRepository.save(passwordResetToken);
+        emailService.setUser(user);
+        emailService.setWhatSituation(false);
+        emailService.setResetLink(resetPasswordLink + token);
+        emailService.sendEmail();
     }
 }

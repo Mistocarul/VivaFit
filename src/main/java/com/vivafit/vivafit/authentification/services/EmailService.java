@@ -21,32 +21,47 @@ import java.util.concurrent.ThreadLocalRandom;
 public class EmailService {
     private User user;
     private int code;
+    private boolean whatSituation;
+    private String resetLink;
 
     @Value("${sendgrid.api.key}")
     private String sendgridApiKey;
-    @Value("${sendgrid.template.id}")
-    private String sendgridTemplateId;
+    @Value("${sendgrid.template.id1}")
+    private String sendgridTemplateId1;
+    @Value("${sendgrid.template.id2}")
+    private String sendgridTemplateId2;
     @Value("${sendgrid.from.email}")
     private String fromEmail;
 
     public String sendEmail() {
-        code = ThreadLocalRandom.current().nextInt(100000, 1000000);
         String toEmail = user.getEmail();
         String fromName = "VivaFit";
-
         Email from = new Email(fromEmail, fromName);
         Email to = new Email(toEmail);
         Mail mail = new Mail();
         mail.setFrom(from);
 
-        Personalization personalization = new Personalization();
-        personalization.addTo(to);
+        if(whatSituation){
+            code = ThreadLocalRandom.current().nextInt(100000, 1000000);
+            Personalization personalization = new Personalization();
+            personalization.addTo(to);
 
-        mail.setTemplateId(sendgridTemplateId);
+            mail.setTemplateId(sendgridTemplateId1);
 
-        personalization.addDynamicTemplateData("username", user.getUsername());
-        personalization.addDynamicTemplateData("code", String.valueOf(code));
-        mail.addPersonalization(personalization);
+            personalization.addDynamicTemplateData("username", user.getUsername());
+            personalization.addDynamicTemplateData("code", String.valueOf(code));
+            mail.addPersonalization(personalization);
+        }
+        else{
+            Personalization personalization = new Personalization();
+            personalization.addTo(to);
+
+            mail.setTemplateId(sendgridTemplateId2);
+
+            personalization.addDynamicTemplateData("username", user.getUsername());
+            personalization.addDynamicTemplateData("resetLink", resetLink);
+            mail.addPersonalization(personalization);
+        }
 
         SendGrid sendGrid = new SendGrid(sendgridApiKey);
         Request request = new Request();
@@ -64,5 +79,4 @@ public class EmailService {
         }
 
     }
-
 }
