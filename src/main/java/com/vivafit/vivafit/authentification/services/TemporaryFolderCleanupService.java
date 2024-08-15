@@ -25,7 +25,7 @@ public class TemporaryFolderCleanupService {
 
     @PostConstruct
     public void startCleanUpTask() {
-        scheduledExecutorService.scheduleAtFixedRate(this::cleanupOldImages, 0, 1, TimeUnit.MINUTES);
+        scheduledExecutorService.scheduleAtFixedRate(this::cleanupOldImages, 0, 30, TimeUnit.MINUTES);
     }
 
     @PreDestroy
