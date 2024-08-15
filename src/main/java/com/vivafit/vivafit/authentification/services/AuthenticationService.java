@@ -6,6 +6,8 @@ import com.vivafit.vivafit.authentification.entities.PasswordResetToken;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsException;
 import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
+import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
+import com.vivafit.vivafit.authentification.exceptions.PasswordsDoNotMatchException;
 import com.vivafit.vivafit.authentification.models.ConfirmationCode;
 import com.vivafit.vivafit.authentification.repositories.PasswordResetTokenRepository;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
@@ -308,6 +310,8 @@ public class AuthenticationService {
         User user = userRepository
                 .findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        //passwordResetTokenRepository.deleteByUser(user);
+        passwordResetTokenRepository.findByUser(user).ifPresent(passwordResetTokenRepository::delete);
         String token = UUID.randomUUID().toString();
         LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(30);
         PasswordResetToken passwordResetToken = new PasswordResetToken();
@@ -319,5 +323,22 @@ public class AuthenticationService {
         emailService.setWhatSituation(false);
         emailService.setResetLink(resetPasswordLink + token);
         emailService.sendEmail();
+    }
+
+    public void resetPassword(String token, String newPassword, String confirmNewPassword){
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository
+                .findByToken(token)
+                .orElseThrow(() -> new InvalidTokenException("Invalid token"));
+        if(passwordResetToken.isExpired()){
+            passwordResetTokenRepository.delete(passwordResetToken);
+            throw new InvalidTokenException("Token has expired");
+        }
+        if(!newPassword.equals(confirmNewPassword)){
+            throw new PasswordsDoNotMatchException("Passwords do not match");
+            }
+        User user = passwordResetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        passwordResetTokenRepository.delete(passwordResetToken);
     }
 }

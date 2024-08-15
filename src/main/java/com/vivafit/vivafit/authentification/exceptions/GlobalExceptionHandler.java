@@ -136,4 +136,22 @@ public class GlobalExceptionHandler {
         problemDetail.setProperty("message", exception.getMessage());
         return problemDetail;
     }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ProblemDetail handleInvalidTokenException(InvalidTokenException exception) {
+        exception.printStackTrace();
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(400), exception.getMessage());
+        problemDetail.setTitle("Invalid Token");
+        problemDetail.setProperty("message", exception.getMessage());
+        return problemDetail;
+    }
+
+    @ExceptionHandler(PasswordsDoNotMatchException.class)
+    public ProblemDetail handlePasswordsDoNotMatchException(PasswordsDoNotMatchException exception){
+        exception.printStackTrace();
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(400), exception.getMessage());
+        problemDetail.setTitle("Passwords Do Not Match");
+        problemDetail.setProperty("message", exception.getMessage());
+        return problemDetail;
+    }
 }
