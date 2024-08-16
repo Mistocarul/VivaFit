@@ -2,21 +2,23 @@ package com.vivafit.vivafit.authentification.controllers;
 
 import com.vivafit.vivafit.authentification.dto.UpdateUserInformationsDto;
 import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
-import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.authentification.responses.UpdateUserResponse;
 import com.vivafit.vivafit.authentification.services.JwtService;
-import com.vivafit.vivafit.authentification.services.TokenManagementService;
+import com.vivafit.vivafit.authentification.services.SignInTokenService;
 import com.vivafit.vivafit.authentification.services.UserService;
-import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,14 +32,24 @@ public class UserController {
     @Autowired
     private JwtService jwtService;
     @Autowired
-    private TokenManagementService tokenManagementService;
+    private SignInTokenService signInTokenService;
 
 
     @GetMapping("/user-informations")
-    public ResponseEntity<User> authenticatedUser() {
+    public ResponseEntity<User> authenticatedUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(currentUser);
+        String existingToken = signInTokenService.getToken(currentUser);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
+            return ResponseEntity.ok(currentUser);
+        }
+        else{
+            throw new InvalidTokenException("Invalid token");
+        }
     }
 
     @GetMapping("/all-users")
@@ -48,17 +60,32 @@ public class UserController {
     }
 
     @DeleteMapping("/delete-user")
-    public ResponseEntity<GeneralApiResponse> deleteUser() {
+    public ResponseEntity<GeneralApiResponse> deleteUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
-        userService.deleteUser(currentUser);
+        String existingToken = signInTokenService.getToken(currentUser);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
+            userService.deleteUser(currentUser);
+        }
+        else{
+            throw new InvalidTokenException("Invalid token");
+        }
         SecurityContextHolder.clearContext();
         GeneralApiResponse response = new GeneralApiResponse("User deleted successfully");
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/update-user")
-    public ResponseEntity<UpdateUserResponse> updateUser(@ModelAttribute UpdateUserInformationsDto updateUserInformationsDto) {
+    public ResponseEntity<UpdateUserResponse> updateUser(@ModelAttribute UpdateUserInformationsDto updateUserInformationsDto,
+                                                         @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
         userService.validateUserUpdateInformations(updateUserInformationsDto);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
@@ -73,12 +100,13 @@ public class UserController {
                 new UsernamePasswordAuthenticationToken(updatedUser.getUsername(), passwordToUse)
         );
         SecurityContextHolder.getContext().setAuthentication(newAuthentication);
-        String existingToken = tokenManagementService.getToken(currentUser.getUsername());
-        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser)) {
-            tokenManagementService.unregisterToken(currentUser.getUsername());
+        String existingToken = signInTokenService.getToken(currentUser);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
+            signInTokenService.unregisterToken(currentUser);
         }
         String token = jwtService.generateToken(updatedUser);
-        tokenManagementService.registerToken(updatedUser.getUsername(), token);
+        LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(jwtService.getExpirationTime()/1000);
+        signInTokenService.registerToken(updatedUser, token, expiryDate);
         UpdateUserResponse response = new UpdateUserResponse("User updated successfully", token, jwtService.getExpirationTime(), updatedUser.getUsername());
         return ResponseEntity.ok(response);
     }

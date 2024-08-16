@@ -2,6 +2,7 @@ package com.vivafit.vivafit.authentification.controllers;
 
 import com.vivafit.vivafit.authentification.dto.*;
 import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.authentification.responses.RegisterResponse;
@@ -9,17 +10,14 @@ import com.vivafit.vivafit.authentification.services.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.MethodParameter;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.time.LocalDateTime;
 
 @RequestMapping("/api/auth")
 @RestController
@@ -30,7 +28,7 @@ public class AuthenticationController {
     @Autowired
     private AuthenticationService authenticationService;
     @Autowired
-    private TokenManagementService tokenManagementService;
+    private SignInTokenService signInTokenService;
     @Autowired
     private ConnectionDetailsService connectionDetailsService;
     @Autowired
@@ -82,13 +80,31 @@ public class AuthenticationController {
         return ResponseEntity.ok(registerResponse);
     }
 
+    @PostMapping("/logout")
+    public ResponseEntity<GeneralApiResponse> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) authentication.getPrincipal();
+        String existingToken = signInTokenService.getToken(user);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, user) && jwtToken.equals(existingToken)) {
+            signInTokenService.unregisterToken(user);
+        }
+        else{
+            throw new InvalidTokenException("Invalid token");
+        }
+        SecurityContextHolder.clearContext();
+        GeneralApiResponse generalApiResponse = new GeneralApiResponse();
+        generalApiResponse.setMessage("User logged out successfully");
+        return ResponseEntity.ok(generalApiResponse);
+    }
+
     @PostMapping("/signin")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto, HttpServletRequest request) {
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
-
-        System.out.println("IP Address: " + ipAddress);
-        System.out.println("User Agent: " + userAgent);
 
         String identifier = loginUserDto.getIdentifier();
         LoginResponse loginResponse = new LoginResponse();
@@ -100,13 +116,14 @@ public class AuthenticationController {
         else{
             User user = authenticationService.loginUser(loginUserDto);
 
-            String existingToken = tokenManagementService.getToken(user.getUsername());
+            String existingToken = signInTokenService.getToken(user);
             if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
-                tokenManagementService.unregisterToken(user.getUsername());
-                tokenManagementService.notifyUserOfDesconnection(user.getUsername());
+                signInTokenService.unregisterToken(user);
+                signInTokenService.notifyUserOfDesconnection(user);
             }
             String token = jwtService.generateToken(user);
-            tokenManagementService.registerToken(user.getUsername(), token);
+            LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(jwtService.getExpirationTime()/1000);
+            signInTokenService.registerToken(user, token, expiryDate);
 
             loginResponse.setToken(token);
             loginResponse.setExpirationTime(jwtService.getExpirationTime());
@@ -135,13 +152,14 @@ public class AuthenticationController {
         String userAgent = request.getHeader("User-Agent");
         LoginUserDto loginUserDto = loginAttemptCacheService.getLoginAttempt(username);
         user = authenticationService.loginUser(loginUserDto);
-        String existingToken = tokenManagementService.getToken(user.getUsername());
+        String existingToken = signInTokenService.getToken(user);
         if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
-            tokenManagementService.unregisterToken(user.getUsername());
-            tokenManagementService.notifyUserOfDesconnection(user.getUsername());
+            signInTokenService.unregisterToken(user);
+            signInTokenService.notifyUserOfDesconnection(user);
         }
         String token = jwtService.generateToken(user);
-        tokenManagementService.registerToken(user.getUsername(), token);
+        LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(jwtService.getExpirationTime()/1000);
+        signInTokenService.registerToken(user, token, expiryDate);
         loginAttemptCacheService.removeLoginAttempt(username);
         if(loginUserDto.getRememberBrowser().contains("true")) {
             connectionDetailsService.saveConnectionDetails(user, ipAddress, userAgent);
