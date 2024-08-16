@@ -93,7 +93,7 @@ public class AuthenticationController {
         String identifier = loginUserDto.getIdentifier();
         LoginResponse loginResponse = new LoginResponse();
         User possibleUser = authenticationService.findUserByIdentifier(identifier);
-        if (connectionDetailsService.isDifferentConnection(possibleUser.getUsername(), ipAddress, userAgent)) {
+        if (connectionDetailsService.isDifferentConnection(possibleUser, ipAddress, userAgent)) {
             loginAttemptCacheService.storeLoginAttempt(possibleUser.getUsername(), loginUserDto);
             authenticationService.sendEmailForNewBrowser(possibleUser.getUsername());
         }
@@ -144,7 +144,7 @@ public class AuthenticationController {
         tokenManagementService.registerToken(user.getUsername(), token);
         loginAttemptCacheService.removeLoginAttempt(username);
         if(loginUserDto.getRememberBrowser().contains("true")) {
-            connectionDetailsService.saveConnectionDetails(user.getUsername(), ipAddress, userAgent);
+            connectionDetailsService.saveConnectionDetails(user, ipAddress, userAgent);
         }
         loginResponse.setToken(token);
         loginResponse.setExpirationTime(jwtService.getExpirationTime());

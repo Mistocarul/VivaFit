@@ -52,6 +52,9 @@ public class User implements UserDetails {
     @Column(name = "updated_at", nullable = false)
     private Date updatedAt;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<ConnectionDetails> connectionDetails;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role));

@@ -15,8 +15,9 @@ public class ConnectionDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_username", nullable = false, length = 25)
-    private String username;
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
+    private User user;
 
     @Column(name = "ip_address", nullable = false, length = 25)
     private String ipAddress;

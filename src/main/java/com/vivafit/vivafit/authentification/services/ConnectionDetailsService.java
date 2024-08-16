@@ -1,6 +1,7 @@
 package com.vivafit.vivafit.authentification.services;
 
 import com.vivafit.vivafit.authentification.entities.ConnectionDetails;
+import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.repositories.ConnectionDetailsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -12,16 +13,16 @@ public class ConnectionDetailsService {
     @Autowired
     private ConnectionDetailsRepository connectionDetailsRepository;
 
-    public void saveConnectionDetails(String username, String ipAddress, String userAgent) {
+    public void saveConnectionDetails(User user, String ipAddress, String userAgent) {
         ConnectionDetails connectionDetails = new ConnectionDetails();
-        connectionDetails.setUsername(username);
+        connectionDetails.setUser(user);
         connectionDetails.setIpAddress(ipAddress);
         connectionDetails.setUserAgent(userAgent);
         connectionDetailsRepository.save(connectionDetails);
     }
 
-    public boolean isDifferentConnection(String username, String ipAddress, String userAgent) {
-        List<ConnectionDetails> connections = connectionDetailsRepository.findAllByUsername(username);
+    public boolean isDifferentConnection(User user, String ipAddress, String userAgent) {
+        List<ConnectionDetails> connections = connectionDetailsRepository.findAllByUser(user);
         if(connections == null) {
             return true;
         }
