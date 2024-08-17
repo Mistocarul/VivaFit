@@ -16,7 +16,7 @@ public class PendingUser {
     @Column(name = "id", nullable = false, updatable = false, unique = true)
     private Integer id;
 
-    @Column(name = "profile_picture", nullable = false, length = 255)
+    @Column(name = "profile_picture", nullable = true, length = 255)
     private String profilePicture;
 
     @Column(name = "username", nullable = false, unique = true, length = 25)
