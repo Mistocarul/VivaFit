@@ -11,7 +11,7 @@ public class LoginAttemptCacheService {
     private CacheManager cacheManager;
 
     public void storeLoginAttempt(String username, LoginUserDto loginUserDto) {
-        cacheManager.getCache("loginAttempts").put(username, loginUserDto);
+            cacheManager.getCache("loginAttempts").put(username, loginUserDto);
     }
 
     public LoginUserDto getLoginAttempt(String username) {
@@ -19,6 +19,8 @@ public class LoginAttemptCacheService {
     }
 
     public void removeLoginAttempt(String username) {
-        cacheManager.getCache("loginAttempts").evict(username);
+        if(cacheManager.getCache("loginAttempts").get(username) != null) {
+            cacheManager.getCache("loginAttempts").evict(username);
+        }
     }
 }

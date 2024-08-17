@@ -28,6 +28,7 @@ public class PasswordResetTokenCleanupService {
     @PreDestroy
     public void stopScheduler(){
         scheduledExecutorService.shutdown();
+        passwordResetTokenRepository.deleteAll();
     }
 
     private void removeExpiredTokens(){

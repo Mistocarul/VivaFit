@@ -1,24 +1,27 @@
 package com.vivafit.vivafit.authentification.services;
 
-import com.vivafit.vivafit.authentification.entities.User;
-import com.vivafit.vivafit.authentification.models.ConfirmationCode;
+import com.vivafit.vivafit.authentification.entities.PendingUser;
+import com.vivafit.vivafit.authentification.entities.ConfirmationCode;
+import com.vivafit.vivafit.authentification.repositories.ConfirmationCodeRepository;
+import com.vivafit.vivafit.authentification.repositories.PendingUserRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @Service
 public class ConfirmationAuthService {
-    private Map<String, User> pendingUsers = new ConcurrentHashMap<>();
-    private Map<String, ConfirmationCode> confirmationCodes = new ConcurrentHashMap<>();
-    private Map<String, String> profilePictures = new ConcurrentHashMap<>();
+    @Autowired
+    private PendingUserRepository pendingUserRepository;
+    @Autowired
+    private ConfirmationCodeRepository confirmationCodeRepository;
+
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
     @PostConstruct
@@ -29,58 +32,56 @@ public class ConfirmationAuthService {
     @PreDestroy
     public void stopCleanUpTask() {
         scheduledExecutorService.shutdown();
+        pendingUserRepository.deleteAll();
+        confirmationCodeRepository.deleteAll();
     }
 
     public void cleanupOldEntries(){
         LocalDateTime now = LocalDateTime.now();
-        pendingUsers.entrySet().removeIf(entry -> {
-            ConfirmationCode confirmationCode = confirmationCodes.get(entry.getKey());
-            boolean mustRemove;
+        pendingUserRepository.findAll().forEach(pendingUser -> {
+            ConfirmationCode confirmationCode = confirmationCodeRepository.findByUsername(pendingUser.getUsername());
             if(confirmationCode != null && Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30){
-                confirmationCodes.remove(entry.getKey());
-                profilePictures.remove(entry.getKey());
-                mustRemove = true;
-            } else {
-                mustRemove = false;
+                confirmationCodeRepository.delete(confirmationCode);
+                pendingUserRepository.delete(pendingUser);
             }
-            return mustRemove;
         });
     }
 
-    public void addPendingUser(String username, User user){
-        pendingUsers.put(username, user);
+    public void addPendingUser(PendingUser pendingUser){
+        pendingUserRepository.save(pendingUser);
     }
 
-    public User getPendingUser(String username){
-        return pendingUsers.get(username);
+    public PendingUser getPendingUser(String username){
+        PendingUser pendingUser = pendingUserRepository.findByUsername(username);
+        if(pendingUser != null){
+            return pendingUser;
+        }
+        return null;
     }
 
-    public void removePendingUser(String username){
-        pendingUsers.remove(username);
+    public void removePendingUser(PendingUser user){
+        PendingUser pendingUser = pendingUserRepository.findByUsername(user.getUsername());
+        if(pendingUser != null){
+            pendingUserRepository.delete(pendingUser);
+        }
     }
 
     public void addConfirmationCode(String username, ConfirmationCode confirmationCode){
-        confirmationCodes.put(username, confirmationCode);
+        ConfirmationCode newConfirmationCode = new ConfirmationCode();
+        newConfirmationCode.setUsername(username);
+        newConfirmationCode.setCode(confirmationCode.getCode());
+        newConfirmationCode.setCreationTime(confirmationCode.getCreationTime());
+        confirmationCodeRepository.save(newConfirmationCode);
     }
 
     public ConfirmationCode getConfirmationCode(String username){
-        return confirmationCodes.get(username);
+        return confirmationCodeRepository.findByUsername(username);
     }
 
     public void removeConfirmationCode(String username){
-        confirmationCodes.remove(username);
+        ConfirmationCode confirmationCode = confirmationCodeRepository.findByUsername(username);
+        if(confirmationCode != null){
+            confirmationCodeRepository.delete(confirmationCode);
+        }
     }
-
-    public void addProfilePicture(String username, String profilePicture){
-        profilePictures.put(username, profilePicture);
-    }
-
-    public String getProfilePicture(String username){
-        return profilePictures.get(username);
-    }
-
-    public void removeProfilePicture(String username){
-        profilePictures.remove(username);
-    }
-
 }

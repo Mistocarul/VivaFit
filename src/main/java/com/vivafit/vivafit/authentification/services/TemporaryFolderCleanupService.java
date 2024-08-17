@@ -31,6 +31,7 @@ public class TemporaryFolderCleanupService {
     @PreDestroy
     public void stopCleanUpTask() {
         scheduledExecutorService.shutdown();
+        deleteaAllFilesInTempFolder();
     }
 
     public void cleanupOldImages() {
@@ -55,5 +56,23 @@ public class TemporaryFolderCleanupService {
             throw new RuntimeException("Error while cleaning up temporary folder", e);
         }
 
+    }
+
+    private void deleteaAllFilesInTempFolder(){
+        Path tempFolder = Path.of(uploadTemporalMultipartFolder);
+        if(!Files.exists(tempFolder)) {
+            return;
+        }
+        try(DirectoryStream<Path> directoryStream = Files.newDirectoryStream(tempFolder)) {
+            for(Path file: directoryStream){
+                try {
+                    Files.delete(file);
+                } catch (Exception e) {
+                    throw new RuntimeException("Error while cleaning up temporary folder", e);
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error while cleaning up temporary folder", e);
+        }
     }
 }

@@ -71,6 +71,7 @@ public class SignInTokenService {
     @PreDestroy
     public void stopTokenCleanup() {
         scheduledExecutorService.shutdown();
+        signInTokenRepository.deleteAll();
     }
 
     private void cleanupExpiredTokens() {
