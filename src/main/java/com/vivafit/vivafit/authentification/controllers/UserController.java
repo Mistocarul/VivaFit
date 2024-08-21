@@ -8,6 +8,7 @@ import com.vivafit.vivafit.authentification.responses.UpdateUserResponse;
 import com.vivafit.vivafit.authentification.services.JwtService;
 import com.vivafit.vivafit.authentification.services.SignInTokenService;
 import com.vivafit.vivafit.authentification.services.UserService;
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;

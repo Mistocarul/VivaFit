@@ -2,10 +2,7 @@ package com.vivafit.vivafit.authentification.services;
 
 import com.vivafit.vivafit.authentification.dto.LoginUserDto;
 import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
-import com.vivafit.vivafit.authentification.entities.ConfirmationCode;
-import com.vivafit.vivafit.authentification.entities.PasswordResetToken;
-import com.vivafit.vivafit.authentification.entities.PendingSignUpUser;
-import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.entities.*;
 import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsException;
 import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
 import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
@@ -46,6 +43,8 @@ public class AuthenticationService {
     private ConfirmationAuthService confirmationAuthService;
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
+    @Autowired
+    private EncryptionDataService encryptionDataService;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -118,16 +117,9 @@ public class AuthenticationService {
                 .findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
-        PendingSignUpUser pendingSignUpUser = toPendingUser(user);
-
-        confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
-        confirmationAuthService.removeConfirmationCode(user.getUsername());
-
         emailService.setUser(user);
         emailService.setWhatSituation(true);
         emailService.sendEmail();
-
-        confirmationAuthService.addPendingSignUpUser(pendingSignUpUser);
 
         ConfirmationCode confirmationCode = new ConfirmationCode();
         confirmationCode.setCode(emailService.getCode());
@@ -164,17 +156,21 @@ public class AuthenticationService {
         LocalDateTime now = LocalDateTime.now();
         if (Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30) {
             confirmationAuthService.removeConfirmationCode(username);
+            PendingSignInUser pendingSignInUser = confirmationAuthService.getPendingSignInUser(username);
+            confirmationAuthService.removePendingSignInUser(pendingSignInUser);
             throw new RuntimeException("Confirmation code has expired");
         }
         Integer codeConfirmation = confirmationCode.getCode();
         if (codeConfirmation != null && codeConfirmation == code) {
-            PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
-            if (pendingSignUpUser != null) {
+            PendingSignInUser pendingSignInUser = confirmationAuthService.getPendingSignInUser(username);
+            if (pendingSignInUser != null) {
 
-                confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
+                confirmationAuthService.removePendingSignInUser(pendingSignInUser);
                 confirmationAuthService.removeConfirmationCode(username);
 
-                User user = toUser(pendingSignUpUser);
+                User user = userRepository
+                        .findByUsername(username)
+                        .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
                 return user;
             }
@@ -206,7 +202,6 @@ public class AuthenticationService {
                 pendingSignUpUser.setProfilePicture(profilePicturePath);
 
                 User user = toUser(pendingSignUpUser);
-
                 userRepository.save(user);
 
                 return user;
@@ -292,9 +287,9 @@ public class AuthenticationService {
     }
 
     public void cancelSignIn(String username){
-        PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
-        if(pendingSignUpUser != null){
-            confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
+        PendingSignInUser pendingSignInUser = confirmationAuthService.getPendingSignInUser(username);
+        if(pendingSignInUser != null){
+            confirmationAuthService.removePendingSignInUser(pendingSignInUser);
             confirmationAuthService.removeConfirmationCode(username);
         }
     }
@@ -302,6 +297,15 @@ public class AuthenticationService {
     public User loginUser(LoginUserDto loginUserDto) {
         String identifier = loginUserDto.getIdentifier();
         User user = null;
+        String password = loginUserDto.getPassword();
+        if (encryptionDataService.isEncrypted(password)) {
+            try {
+                password = encryptionDataService.decrypt(password);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw new RuntimeException("Failed to decrypt password");
+            }
+        }
         if (identifier.contains("@")){
             user = userRepository
                     .findByEmail(identifier)
@@ -315,7 +319,7 @@ public class AuthenticationService {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         user.getUsername(),
-                        loginUserDto.getPassword()
+                        password
                 )
         );
         return user;

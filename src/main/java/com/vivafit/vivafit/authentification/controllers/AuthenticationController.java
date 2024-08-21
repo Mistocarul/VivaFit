@@ -1,6 +1,7 @@
 package com.vivafit.vivafit.authentification.controllers;
 
 import com.vivafit.vivafit.authentification.dto.*;
+import com.vivafit.vivafit.authentification.entities.PendingSignInUser;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
@@ -32,7 +33,7 @@ public class AuthenticationController {
     @Autowired
     private ConnectionDetailsService connectionDetailsService;
     @Autowired
-    private LoginAttemptCacheService loginAttemptCacheService;
+    private ConfirmationAuthService confirmationAuthService;
 
     @PostMapping("/signup")
     public ResponseEntity<RegisterResponse> register(@Valid @ModelAttribute RegisterUserDto registerUserDto) {
@@ -110,7 +111,12 @@ public class AuthenticationController {
         LoginResponse loginResponse = new LoginResponse();
         User possibleUser = authenticationService.findUserByIdentifier(identifier);
         if (connectionDetailsService.isDifferentConnection(possibleUser, ipAddress, userAgent)) {
-            loginAttemptCacheService.storeLoginAttempt(possibleUser.getUsername(), loginUserDto);
+            PendingSignInUser pendingSignInUser = new PendingSignInUser();
+            pendingSignInUser.setIdentifier(loginUserDto.getIdentifier());
+            pendingSignInUser.setPassword(loginUserDto.getPassword());
+            pendingSignInUser.setRememberBrowser(loginUserDto.getRememberBrowser());
+            pendingSignInUser.setUser(possibleUser);
+            confirmationAuthService.addPendingSignInUser(pendingSignInUser);
             authenticationService.sendEmailForNewBrowser(possibleUser.getUsername());
         }
         else{
@@ -136,10 +142,26 @@ public class AuthenticationController {
         return ResponseEntity.ok(loginResponse);
     }
 
+    @PostMapping("/resend-new-browser-email")
+    public ResponseEntity<GeneralApiResponse> resendNewBrowserEmail(@Valid @RequestBody ConfirmationCodeDto confirmationCodeDto) {
+        String username = confirmationCodeDto.getUsername();
+        authenticationService.sendEmailForNewBrowser(username);
+        GeneralApiResponse generalApiResponse = new GeneralApiResponse();
+        generalApiResponse.setMessage("Confirmation email sent. Please check your email for further instructions.");
+        return ResponseEntity.ok(generalApiResponse);
+    }
+
     @PostMapping("/confirm-new-browser")
     public ResponseEntity<LoginResponse> confirmNewBrowser(@Valid @RequestBody ConfirmationCodeDto confirmationCodeDto, HttpServletRequest request) {
         String username = confirmationCodeDto.getUsername();
         int code = confirmationCodeDto.getCode();
+
+        PendingSignInUser pendingSignInUser = confirmationAuthService.getPendingSignInUser(username);
+        LoginUserDto loginUserDto = new LoginUserDto();
+        loginUserDto.setIdentifier(pendingSignInUser.getIdentifier());
+        loginUserDto.setPassword(pendingSignInUser.getPassword());
+        loginUserDto.setRememberBrowser(pendingSignInUser.getRememberBrowser());
+
         User user = authenticationService.confirmSignIn(username, code);
         LoginResponse loginResponse = new LoginResponse();
         if (user == null) {
@@ -150,7 +172,7 @@ public class AuthenticationController {
         }
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
-        LoginUserDto loginUserDto = loginAttemptCacheService.getLoginAttempt(username);
+
         user = authenticationService.loginUser(loginUserDto);
         String existingToken = signInTokenService.getToken(user);
         if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
@@ -160,7 +182,9 @@ public class AuthenticationController {
         String token = jwtService.generateToken(user);
         LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(jwtService.getExpirationTime()/1000);
         signInTokenService.registerToken(user, token, expiryDate);
-        loginAttemptCacheService.removeLoginAttempt(username);
+
+        confirmationAuthService.removePendingSignInUser(pendingSignInUser);
+
         if(loginUserDto.getRememberBrowser().contains("true")) {
             connectionDetailsService.saveConnectionDetails(user, ipAddress, userAgent);
         }
@@ -175,7 +199,14 @@ public class AuthenticationController {
         String username = confirmationCodeDto.getUsername();
         Integer code = confirmationCodeDto.getCode();
         authenticationService.cancelSignIn(username);
-        loginAttemptCacheService.removeLoginAttempt(username);
+
+        PendingSignInUser pendingSignInUser = confirmationAuthService.getPendingSignInUser(username);
+        LoginUserDto loginUserDto = new LoginUserDto();
+        loginUserDto.setIdentifier(pendingSignInUser.getIdentifier());
+        loginUserDto.setPassword(pendingSignInUser.getPassword());
+        loginUserDto.setRememberBrowser(pendingSignInUser.getRememberBrowser());
+        confirmationAuthService.removePendingSignInUser(pendingSignInUser);
+
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setToken(null);
         loginResponse.setExpirationTime(0);
