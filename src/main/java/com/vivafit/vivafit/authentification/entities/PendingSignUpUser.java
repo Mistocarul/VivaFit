@@ -9,8 +9,8 @@ import lombok.*;
 @RequiredArgsConstructor
 
 @Entity
-@Table(name = "pending_users")
-public class PendingUser {
+@Table(name = "pending_sign_up_users")
+public class PendingSignUpUser {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false, unique = true)

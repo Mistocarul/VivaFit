@@ -4,7 +4,7 @@ import com.vivafit.vivafit.authentification.dto.LoginUserDto;
 import com.vivafit.vivafit.authentification.dto.RegisterUserDto;
 import com.vivafit.vivafit.authentification.entities.ConfirmationCode;
 import com.vivafit.vivafit.authentification.entities.PasswordResetToken;
-import com.vivafit.vivafit.authentification.entities.PendingUser;
+import com.vivafit.vivafit.authentification.entities.PendingSignUpUser;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsException;
 import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
@@ -14,11 +14,8 @@ import com.vivafit.vivafit.authentification.repositories.PasswordResetTokenRepos
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,9 +30,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AuthenticationService {
@@ -78,10 +73,10 @@ public class AuthenticationService {
         user.setPhoneNumber(registerUserDto.getPhoneNumber());
         user.setRole(registerUserDto.getRole());
 
-        PendingUser pendingUser = toPendingUser(user);
+        PendingSignUpUser pendingSignUpUser = toPendingUser(user);
 
-        confirmationAuthService.removePendingUser(pendingUser);
-        confirmationAuthService.removeConfirmationCode(pendingUser.getUsername());
+        confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
+        confirmationAuthService.removeConfirmationCode(pendingSignUpUser.getUsername());
 
         emailService.setUser(user);
         emailService.setWhatSituation(true);
@@ -107,14 +102,14 @@ public class AuthenticationService {
                 Path filePath = temporalMultipartFolderPath.resolve(filename);
                 profilePicture.transferTo(filePath.toFile());
                 String temporalMultipartFilePath = filePath.toString();
-                pendingUser.setProfilePicture(temporalMultipartFilePath);
-                System.out.println("Pending user: " + pendingUser);
+                pendingSignUpUser.setProfilePicture(temporalMultipartFilePath);
+                System.out.println("Pending user: " + pendingSignUpUser);
 
             } catch (IOException e) {
                 throw new RuntimeException("Failed to upload profile picture", e);
             }
         }
-        confirmationAuthService.addPendingUser(pendingUser);
+        confirmationAuthService.addPendingSignUpUser(pendingSignUpUser);
         return user;
     }
 
@@ -123,16 +118,16 @@ public class AuthenticationService {
                 .findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
-        PendingUser pendingUser = toPendingUser(user);
+        PendingSignUpUser pendingSignUpUser = toPendingUser(user);
 
-        confirmationAuthService.removePendingUser(pendingUser);
+        confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
         confirmationAuthService.removeConfirmationCode(user.getUsername());
 
         emailService.setUser(user);
         emailService.setWhatSituation(true);
         emailService.sendEmail();
 
-        confirmationAuthService.addPendingUser(pendingUser);
+        confirmationAuthService.addPendingSignUpUser(pendingSignUpUser);
 
         ConfirmationCode confirmationCode = new ConfirmationCode();
         confirmationCode.setCode(emailService.getCode());
@@ -141,11 +136,11 @@ public class AuthenticationService {
     }
 
     public User resendEmail(String username){
-        PendingUser pendingUser = confirmationAuthService.getPendingUser(username);
-        if(pendingUser != null){
+        PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
+        if(pendingSignUpUser != null){
             confirmationAuthService.removeConfirmationCode(username);
 
-            User user = toUser(pendingUser);
+            User user = toUser(pendingSignUpUser);
 
             emailService.setUser(user);
             emailService.setWhatSituation(true);
@@ -173,13 +168,13 @@ public class AuthenticationService {
         }
         Integer codeConfirmation = confirmationCode.getCode();
         if (codeConfirmation != null && codeConfirmation == code) {
-            PendingUser pendingUser = confirmationAuthService.getPendingUser(username);
-            if (pendingUser != null) {
+            PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
+            if (pendingSignUpUser != null) {
 
-                confirmationAuthService.removePendingUser(pendingUser);
+                confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
                 confirmationAuthService.removeConfirmationCode(username);
 
-                User user = toUser(pendingUser);
+                User user = toUser(pendingSignUpUser);
 
                 return user;
             }
@@ -194,23 +189,23 @@ public class AuthenticationService {
         }
         LocalDateTime now = LocalDateTime.now();
         if (Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30) {
-            PendingUser pendingUser = confirmationAuthService.getPendingUser(username);
-            confirmationAuthService.removePendingUser(pendingUser);
+            PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
+            confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
             throw new RuntimeException("Confirmation code has expired");
         }
         Integer codeConfirmation = confirmationCode.getCode();
         if(codeConfirmation != null && codeConfirmation == code){
-            PendingUser pendingUser= confirmationAuthService.getPendingUser(username);
-            if(pendingUser != null){
-                String profilePictureTemporalPath = pendingUser.getProfilePicture();
+            PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
+            if(pendingSignUpUser != null){
+                String profilePictureTemporalPath = pendingSignUpUser.getProfilePicture();
 
-                confirmationAuthService.removePendingUser(pendingUser);
+                confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
                 confirmationAuthService.removeConfirmationCode(username);
 
                 String profilePicturePath = saveProfilePicture(profilePictureTemporalPath, username);
-                pendingUser.setProfilePicture(profilePicturePath);
+                pendingSignUpUser.setProfilePicture(profilePicturePath);
 
-                User user = toUser(pendingUser);
+                User user = toUser(pendingSignUpUser);
 
                 userRepository.save(user);
 
@@ -289,17 +284,17 @@ public class AuthenticationService {
     }
 
     public void cancelRegistration(String username){
-        PendingUser pendingUser = confirmationAuthService.getPendingUser(username);
-        if(pendingUser != null){
-            confirmationAuthService.removePendingUser(pendingUser);
+        PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
+        if(pendingSignUpUser != null){
+            confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
             confirmationAuthService.removeConfirmationCode(username);
         }
     }
 
     public void cancelSignIn(String username){
-        PendingUser pendingUser = confirmationAuthService.getPendingUser(username);
-        if(pendingUser != null){
-            confirmationAuthService.removePendingUser(pendingUser);
+        PendingSignUpUser pendingSignUpUser = confirmationAuthService.getPendingSignUpUser(username);
+        if(pendingSignUpUser != null){
+            confirmationAuthService.removePendingSignUpUser(pendingSignUpUser);
             confirmationAuthService.removeConfirmationCode(username);
         }
     }
@@ -380,48 +375,48 @@ public class AuthenticationService {
         passwordResetTokenRepository.delete(passwordResetToken);
     }
 
-    public PendingUser toPendingUser(User user){
-        PendingUser pendingUser = new PendingUser();
+    public PendingSignUpUser toPendingUser(User user){
+        PendingSignUpUser pendingSignUpUser = new PendingSignUpUser();
         if(user.getUsername() != null){
-            pendingUser.setUsername(user.getUsername());
+            pendingSignUpUser.setUsername(user.getUsername());
         }
         if(user.getPassword() != null){
-            pendingUser.setPassword(user.getPassword());
+            pendingSignUpUser.setPassword(user.getPassword());
         }
         if(user.getEmail() != null){
-            pendingUser.setEmail(user.getEmail());
+            pendingSignUpUser.setEmail(user.getEmail());
         }
         if(user.getPhoneNumber() != null){
-            pendingUser.setPhoneNumber(user.getPhoneNumber());
+            pendingSignUpUser.setPhoneNumber(user.getPhoneNumber());
         }
         if(user.getRole() != null){
-            pendingUser.setRole(user.getRole());
+            pendingSignUpUser.setRole(user.getRole());
         }
         if(user.getProfilePicture() != null){
-            pendingUser.setProfilePicture(user.getProfilePicture());
+            pendingSignUpUser.setProfilePicture(user.getProfilePicture());
         }
-        return pendingUser;
+        return pendingSignUpUser;
     }
 
-    public User toUser (PendingUser pendingUser){
+    public User toUser (PendingSignUpUser pendingSignUpUser){
         User user = new User();
-        if(pendingUser.getUsername() != null){
-            user.setUsername(pendingUser.getUsername());
+        if(pendingSignUpUser.getUsername() != null){
+            user.setUsername(pendingSignUpUser.getUsername());
         }
-        if(pendingUser.getPassword() != null){
-            user.setPassword(pendingUser.getPassword());
+        if(pendingSignUpUser.getPassword() != null){
+            user.setPassword(pendingSignUpUser.getPassword());
         }
-        if(pendingUser.getEmail() != null){
-            user.setEmail(pendingUser.getEmail());
+        if(pendingSignUpUser.getEmail() != null){
+            user.setEmail(pendingSignUpUser.getEmail());
         }
-        if(pendingUser.getPhoneNumber() != null){
-            user.setPhoneNumber(pendingUser.getPhoneNumber());
+        if(pendingSignUpUser.getPhoneNumber() != null){
+            user.setPhoneNumber(pendingSignUpUser.getPhoneNumber());
         }
-        if(pendingUser.getRole() != null){
-            user.setRole(pendingUser.getRole());
+        if(pendingSignUpUser.getRole() != null){
+            user.setRole(pendingSignUpUser.getRole());
         }
-        if(pendingUser.getProfilePicture() != null){
-            user.setProfilePicture(pendingUser.getProfilePicture());
+        if(pendingSignUpUser.getProfilePicture() != null){
+            user.setProfilePicture(pendingSignUpUser.getProfilePicture());
         }
         return user;
     }

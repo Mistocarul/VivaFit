@@ -1,9 +1,9 @@
 package com.vivafit.vivafit.authentification.services;
 
-import com.vivafit.vivafit.authentification.entities.PendingUser;
+import com.vivafit.vivafit.authentification.entities.PendingSignUpUser;
 import com.vivafit.vivafit.authentification.entities.ConfirmationCode;
 import com.vivafit.vivafit.authentification.repositories.ConfirmationCodeRepository;
-import com.vivafit.vivafit.authentification.repositories.PendingUserRepository;
+import com.vivafit.vivafit.authentification.repositories.PendingSignUpUserRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 @Service
 public class ConfirmationAuthService {
     @Autowired
-    private PendingUserRepository pendingUserRepository;
+    private PendingSignUpUserRepository pendingSignUpUserRepository;
     @Autowired
     private ConfirmationCodeRepository confirmationCodeRepository;
 
@@ -32,37 +32,37 @@ public class ConfirmationAuthService {
     @PreDestroy
     public void stopCleanUpTask() {
         scheduledExecutorService.shutdown();
-        pendingUserRepository.deleteAll();
+        pendingSignUpUserRepository.deleteAll();
         confirmationCodeRepository.deleteAll();
     }
 
     public void cleanupOldEntries(){
         LocalDateTime now = LocalDateTime.now();
-        pendingUserRepository.findAll().forEach(pendingUser -> {
-            ConfirmationCode confirmationCode = confirmationCodeRepository.findByUsername(pendingUser.getUsername());
+        pendingSignUpUserRepository.findAll().forEach(pendingSignUpUser -> {
+            ConfirmationCode confirmationCode = confirmationCodeRepository.findByUsername(pendingSignUpUser.getUsername());
             if(confirmationCode != null && Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30){
                 confirmationCodeRepository.delete(confirmationCode);
-                pendingUserRepository.delete(pendingUser);
+                pendingSignUpUserRepository.delete(pendingSignUpUser);
             }
         });
     }
 
-    public void addPendingUser(PendingUser pendingUser){
-        pendingUserRepository.save(pendingUser);
+    public void addPendingSignUpUser(PendingSignUpUser pendingSignUpUser){
+        pendingSignUpUserRepository.save(pendingSignUpUser);
     }
 
-    public PendingUser getPendingUser(String username){
-        PendingUser pendingUser = pendingUserRepository.findByUsername(username);
-        if(pendingUser != null){
-            return pendingUser;
+    public PendingSignUpUser getPendingSignUpUser(String username){
+        PendingSignUpUser pendingSignUpUser = pendingSignUpUserRepository.findByUsername(username);
+        if(pendingSignUpUser != null){
+            return pendingSignUpUser;
         }
         return null;
     }
 
-    public void removePendingUser(PendingUser user){
-        PendingUser pendingUser = pendingUserRepository.findByUsername(user.getUsername());
-        if(pendingUser != null){
-            pendingUserRepository.delete(pendingUser);
+    public void removePendingSignUpUser(PendingSignUpUser user){
+        PendingSignUpUser pendingSignUpUser = pendingSignUpUserRepository.findByUsername(user.getUsername());
+        if(pendingSignUpUser != null){
+            pendingSignUpUserRepository.delete(pendingSignUpUser);
         }
     }
 
