@@ -4,6 +4,7 @@ import com.vivafit.vivafit.authentification.dto.*;
 import com.vivafit.vivafit.authentification.entities.PendingSignInUser;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
+import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.authentification.responses.RegisterResponse;
@@ -233,4 +234,5 @@ public class AuthenticationController {
         generalApiResponse.setMessage("Password reset successfully");
         return ResponseEntity.ok(generalApiResponse);
     }
+
 }

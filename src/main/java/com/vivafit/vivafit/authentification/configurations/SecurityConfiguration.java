@@ -32,7 +32,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/users/all-users").hasAuthority("ADMIN")
                         .requestMatchers("/ws/**").permitAll()
                         .anyRequest().authenticated()
-                ) //configureaza autorizarea requesturilor
+                )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //configureaza managementul sesiunilor sa depinda de JWT
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

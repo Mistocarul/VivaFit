@@ -13,13 +13,13 @@ import java.util.Base64;
 @Service
 public class EncryptionDataService {
 
-    private static  String ALGORITHM = "AES";
+    private String algorithm = "AES";
     private SecretKey secretKey;
 
     public EncryptionDataService(@Value("${encryption.secret.key}") String base64SecretKey) {
         try {
             byte[] decodedKey = Base64.getDecoder().decode(base64SecretKey);
-            this.secretKey = new SecretKeySpec(decodedKey, ALGORITHM);
+            this.secretKey = new SecretKeySpec(decodedKey, algorithm);
         } catch (Exception e) {
             throw new RuntimeException("Failed to initialize EncryptionDataService", e);
         }
@@ -31,7 +31,7 @@ public class EncryptionDataService {
             NoSuchPaddingException,
             IllegalBlockSizeException,
             BadPaddingException {
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
+        Cipher cipher = Cipher.getInstance(algorithm);
         cipher.init(Cipher.ENCRYPT_MODE, secretKey);
         byte[] encryptedData = cipher.doFinal(data.getBytes());
         return Base64.getEncoder().encodeToString(encryptedData);
@@ -42,7 +42,7 @@ public class EncryptionDataService {
             InvalidKeyException,
             IllegalBlockSizeException,
             BadPaddingException {
-        Cipher cipher = Cipher.getInstance(ALGORITHM);
+        Cipher cipher = Cipher.getInstance(algorithm);
         cipher.init(Cipher.DECRYPT_MODE, secretKey);
         byte[] decodedData = Base64.getDecoder().decode(encryptedData);
         byte[] decryptedData = cipher.doFinal(decodedData);
