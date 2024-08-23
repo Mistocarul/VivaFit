@@ -45,6 +45,9 @@ public class User implements UserDetails {
     @Column(name = "role", nullable = false, length = 20)
     private String role;
 
+    @Column(name = "created_with", nullable = false, length = 20)
+    private String createdWith;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Date createdAt;

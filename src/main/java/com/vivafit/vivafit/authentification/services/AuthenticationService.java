@@ -71,6 +71,7 @@ public class AuthenticationService {
         user.setEmail(registerUserDto.getEmail());
         user.setPhoneNumber(registerUserDto.getPhoneNumber());
         user.setRole(registerUserDto.getRole());
+        user.setCreatedWith("OwnMethod");
 
         PendingSignUpUser pendingSignUpUser = toPendingUser(user);
 
@@ -316,6 +317,9 @@ public class AuthenticationService {
                     .findByUsername(identifier)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + identifier));
         }
+        if (user.getCreatedWith() != null && !user.getCreatedWith().equals("OwnMethod")){
+            throw new RuntimeException("User was created with " + user.getCreatedWith());
+        }
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         user.getUsername(),
@@ -399,6 +403,9 @@ public class AuthenticationService {
         if(user.getProfilePicture() != null){
             pendingSignUpUser.setProfilePicture(user.getProfilePicture());
         }
+        if (user.getCreatedWith() != null){
+            pendingSignUpUser.setCreatedWith(user.getCreatedWith());
+        }
         return pendingSignUpUser;
     }
 
@@ -421,6 +428,9 @@ public class AuthenticationService {
         }
         if(pendingSignUpUser.getProfilePicture() != null){
             user.setProfilePicture(pendingSignUpUser.getProfilePicture());
+        }
+        if(pendingSignUpUser.getCreatedWith() != null){
+            user.setCreatedWith(pendingSignUpUser.getCreatedWith());
         }
         return user;
     }

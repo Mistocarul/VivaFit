@@ -33,4 +33,7 @@ public class PendingSignUpUser {
 
     @Column(name = "role", nullable = false, length = 20)
     private String role;
+
+    @Column(name = "created_with", nullable = false, length = 20)
+    private String createdWith;
 }

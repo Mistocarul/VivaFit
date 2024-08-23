@@ -67,7 +67,11 @@ public class UserService {
     }
 
     public User updateUserInformation(UpdateUserInformationsDto updateUserInformationsDto, User currentUser){
-        if(!passwordEncoder.matches(updateUserInformationsDto.getCurrentPassword(), currentUser.getPassword())) {
+        if(!passwordEncoder.matches(updateUserInformationsDto.getCurrentPassword(), currentUser.getPassword())
+        && currentUser.getCreatedWith().equals("OwnMethod")) {
+            if (currentUser.getCreatedWith().equals("Google")) {
+                throw new RuntimeException("You can't change your password because you signed up with Google");
+            }
             throw new RuntimeException("Current password is incorrect");
         }
         if(updateUserInformationsDto.getNewUsername() != null && !updateUserInformationsDto.getNewUsername().isEmpty()){
@@ -116,10 +120,18 @@ public class UserService {
             }
             currentUser.setUsername(updateUserInformationsDto.getNewUsername());
         }
-        if (updateUserInformationsDto.getNewPassword() != null && !updateUserInformationsDto.getNewPassword().isEmpty()) {
+        if (updateUserInformationsDto.getNewPassword() != null && !updateUserInformationsDto.getNewPassword().isEmpty()
+                && currentUser.getCreatedWith().equals("OwnMethod")) {
+            if (currentUser.getCreatedWith().equals("Google")) {
+                throw new RuntimeException("You can't change your password because you signed up with Google");
+            }
             currentUser.setPassword(passwordEncoder.encode(updateUserInformationsDto.getNewPassword()));
         }
-        if (updateUserInformationsDto.getNewEmail() != null && !updateUserInformationsDto.getNewEmail().isEmpty()) {
+        if (updateUserInformationsDto.getNewEmail() != null && !updateUserInformationsDto.getNewEmail().isEmpty()
+                && currentUser.getCreatedWith().equals("OwnMethod")) {
+            if (currentUser.getCreatedWith().equals("Google")) {
+                throw new RuntimeException("You can't change your email because you signed up with Google");
+            }
             if (userRepository.existsByEmail(updateUserInformationsDto.getNewEmail())) {
                 throw new DataAlreadyExistsException("Email is already registered.");
             }

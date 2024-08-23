@@ -111,9 +111,12 @@ public class AuthenticationController {
         String identifier = loginUserDto.getIdentifier();
         LoginResponse loginResponse = new LoginResponse();
         User possibleUser = authenticationService.findUserByIdentifier(identifier);
+        if (possibleUser.getCreatedWith().equals("google")) {
+            throw new RuntimeException("User created with Google. Please login with Google");
+        }
         if (connectionDetailsService.isDifferentConnection(possibleUser, ipAddress, userAgent)) {
             PendingSignInUser pendingSignInUser = new PendingSignInUser();
-            pendingSignInUser.setIdentifier(loginUserDto.getIdentifier());
+            pendingSignInUser.setIdentifier(possibleUser.getUsername());
             pendingSignInUser.setPassword(loginUserDto.getPassword());
             pendingSignInUser.setRememberBrowser(loginUserDto.getRememberBrowser());
             pendingSignInUser.setUser(possibleUser);
