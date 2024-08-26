@@ -71,7 +71,7 @@ public class AuthenticationService {
         user.setEmail(registerUserDto.getEmail());
         user.setPhoneNumber(registerUserDto.getPhoneNumber());
         user.setRole(registerUserDto.getRole());
-        user.setCreatedWith("OwnMethod");
+        user.setCreatedWith("OWN_METHOD");
 
         PendingSignUpUser pendingSignUpUser = toPendingUser(user);
 

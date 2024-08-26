@@ -5,6 +5,9 @@ import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsException;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -19,15 +22,16 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -47,26 +51,46 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
     private String uploadFolderUsersPhotosPath;
     @Value("${upload.folder.users-folders.path}")
     private String uploadFolderUsersFoldersPath;
-    @Value("${google.super.secret.password}")
-    private String googleSuperSecretPassword;
-    @Value("${google.super.secret.phone.number}")
-    private String googleSuperSecretPhoneNumber;
+    @Value("${OAuth2.super.secret.password}")
+    private String OAuth2SuperSecretPassword;
+    @Value("${facebook.graph.access.token}")
+    private String facebookGraphAccessToken;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oAuth2User = super.loadUser(userRequest);
 
-        String email = oAuth2User.getAttribute("email");
-        String name = oAuth2User.getAttribute("name");
-        String profilePicture = oAuth2User.getAttribute("picture");
+        String registrationId = userRequest.getClientRegistration().getRegistrationId();
+        String email = null;
+        String name = null;
+        String profilePicture = null;
+
+        if (registrationId.equals("google")){
+            email = oAuth2User.getAttribute("email");
+            name = oAuth2User.getAttribute("name");
+            profilePicture = oAuth2User.getAttribute("picture");
+        }
+        else{
+            if (registrationId.equals("facebook")){
+                email = oAuth2User.getAttribute("email");
+                name = oAuth2User.getAttribute("name");
+                String userId = oAuth2User.getAttribute("id");
+                try {
+                    profilePicture = getFacebookProfilePicture(userId);
+                    System.out.println(profilePicture);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
 
         User user = userRepository.findByEmail(email).orElse(null);
-        if (user != null && user.getCreatedWith().equals("GOOGLE")){
-            user = loginUserWithGooogle(user);
-            generateJwtTokenForGoogle(user);
+        if (user != null && (user.getCreatedWith().equals("GOOGLE") || user.getCreatedWith().equals("FACEBOOK"))){
+            user = loginUserWithOAuth2(user);
+            generateJwtTokenForOAuth2(user);
             return oAuth2User;
         }
-        else if (user != null && !user.getCreatedWith().equals("GOOGLE")){
+        else if (user != null && !user.getCreatedWith().equals("GOOGLE") && !user.getCreatedWith().equals("FACEBOOK")){
             throw new DataAlreadyExistsException("Email already exists");
         }
         user = userRepository.findByUsername(name).orElse(null);
@@ -81,11 +105,16 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         User newUser = new User();
         newUser.setEmail(email);
         newUser.setUsername(name);
-        newUser.setPassword(passwordEncoder.encode(googleSuperSecretPassword));
-        newUser.setPhoneNumber(googleSuperSecretPhoneNumber);
+        newUser.setPassword(passwordEncoder.encode(OAuth2SuperSecretPassword));
+        newUser.setPhoneNumber("+" + name);
         newUser.setProfilePicture(profilePicture);
         newUser.setRole("USER");
-        newUser.setCreatedWith("GOOGLE");
+        if (registrationId.equals("google")){
+            newUser.setCreatedWith("GOOGLE");
+        }
+        else{
+            newUser.setCreatedWith("FACEBOOK");
+        }
 
         String uploadUserFolder = uploadFolderUsersFoldersPath + name;
         Path uploadUserFolderPath = Paths.get(uploadUserFolder);
@@ -140,14 +169,14 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         }
         userRepository.save(newUser);
 
-        loginUserWithGooogle(newUser);
-        generateJwtTokenForGoogle(newUser);
+        loginUserWithOAuth2(newUser);
+        generateJwtTokenForOAuth2(newUser);
 
         return oAuth2User;
     }
 
-    public User loginUserWithGooogle(User user){
-        String password = googleSuperSecretPassword;
+    public User loginUserWithOAuth2(User user){
+        String password = OAuth2SuperSecretPassword;
         String username = user.getUsername();
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
@@ -158,7 +187,7 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         return user;
     }
 
-    public void generateJwtTokenForGoogle(User user){
+    public void generateJwtTokenForOAuth2(User user){
         String existingToken = signInTokenService.getToken(user);
         if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
             signInTokenService.unregisterToken(user);
@@ -167,5 +196,10 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         String token = jwtService.generateToken(user);
         LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(jwtService.getExpirationTime()/1000);
         signInTokenService.registerToken(user, token, expiryDate);
+    }
+
+    public String getFacebookProfilePicture(String userId) throws IOException {
+        String url = "https://graph.facebook.com/" + userId + "/picture?type=large&access_token=" + facebookGraphAccessToken;
+        return url;
     }
 }
