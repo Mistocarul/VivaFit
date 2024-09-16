@@ -79,7 +79,7 @@ public class AuthenticationService {
         confirmationAuthService.removeConfirmationCode(pendingSignUpUser.getUsername());
 
         emailService.setUser(user);
-        emailService.setWhatSituation(true);
+        emailService.setWhatSituation(0);
         emailService.sendEmail();
 
         ConfirmationCode confirmationCode = new ConfirmationCode();
@@ -119,7 +119,7 @@ public class AuthenticationService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
         emailService.setUser(user);
-        emailService.setWhatSituation(true);
+        emailService.setWhatSituation(0);
         emailService.sendEmail();
 
         ConfirmationCode confirmationCode = new ConfirmationCode();
@@ -136,7 +136,7 @@ public class AuthenticationService {
             User user = toUser(pendingSignUpUser);
 
             emailService.setUser(user);
-            emailService.setWhatSituation(true);
+            emailService.setWhatSituation(0);
             emailService.sendEmail();
 
             ConfirmationCode confirmationCode = new ConfirmationCode();
@@ -361,7 +361,7 @@ public class AuthenticationService {
         passwordResetTokenRepository.save(passwordResetToken);
 
         emailService.setUser(user);
-        emailService.setWhatSituation(false);
+        emailService.setWhatSituation(1);
         emailService.setResetLink(resetPasswordLink + token);
         emailService.sendEmail();
     }
@@ -381,6 +381,19 @@ public class AuthenticationService {
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
         passwordResetTokenRepository.delete(passwordResetToken);
+    }
+
+    public void sendNewSignInAlertEmail(String username, String ipAdress, String userAgent, String device){
+        User user = userRepository
+                .findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+
+        emailService.setUser(user);
+        emailService.setWhatSituation(2);
+        emailService.setIpAdress(ipAdress);
+        emailService.setUserAgent(userAgent);
+        emailService.setDevice(device);
+        emailService.sendEmail();
     }
 
     public PendingSignUpUser toPendingUser(User user){

@@ -107,6 +107,13 @@ public class AuthenticationController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginUserDto loginUserDto, HttpServletRequest request) {
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
+        String device = null;
+        if (userAgent.contains("Mobi")) {
+            device = "Telefon";
+        }
+        else {
+            device = "Desktop";
+        }
 
         String identifier = loginUserDto.getIdentifier();
         LoginResponse loginResponse = new LoginResponse();
@@ -114,7 +121,7 @@ public class AuthenticationController {
         if (possibleUser.getCreatedWith().equals("google")) {
             throw new RuntimeException("User created with Google. Please login with Google");
         }
-        if (connectionDetailsService.isDifferentConnection(possibleUser, ipAddress, userAgent)) {
+        if (connectionDetailsService.isDifferentConnection(possibleUser, ipAddress, userAgent, device)) {
             PendingSignInUser pendingSignInUser = new PendingSignInUser();
             pendingSignInUser.setIdentifier(possibleUser.getUsername());
             pendingSignInUser.setPassword(loginUserDto.getPassword());
@@ -142,7 +149,7 @@ public class AuthenticationController {
         }
         loginResponse.setToken(null);
         loginResponse.setExpirationTime(0);
-        loginResponse.setUsername(null);
+        loginResponse.setUsername(possibleUser.getUsername());
         return ResponseEntity.ok(loginResponse);
     }
 
@@ -176,6 +183,13 @@ public class AuthenticationController {
         }
         String ipAddress = request.getRemoteAddr();
         String userAgent = request.getHeader("User-Agent");
+        String device = null;
+        if (userAgent.contains("Mobi")) {
+            device = "Telefon";
+        }
+        else {
+            device = "Desktop";
+        }
 
         user = authenticationService.loginUser(loginUserDto);
         String existingToken = signInTokenService.getToken(user);
@@ -190,8 +204,10 @@ public class AuthenticationController {
         confirmationAuthService.removePendingSignInUser(pendingSignInUser);
 
         if(loginUserDto.getRememberBrowser().contains("true")) {
-            connectionDetailsService.saveConnectionDetails(user, ipAddress, userAgent);
+            connectionDetailsService.saveConnectionDetails(user, ipAddress, userAgent, device);
         }
+        authenticationService.sendNewSignInAlertEmail(username, ipAddress, userAgent, device);
+
         loginResponse.setToken(token);
         loginResponse.setExpirationTime(jwtService.getExpirationTime());
         loginResponse.setUsername(user.getUsername());
@@ -210,6 +226,7 @@ public class AuthenticationController {
         loginUserDto.setPassword(pendingSignInUser.getPassword());
         loginUserDto.setRememberBrowser(pendingSignInUser.getRememberBrowser());
         confirmationAuthService.removePendingSignInUser(pendingSignInUser);
+        confirmationAuthService.removeConfirmationCode(username);
 
         LoginResponse loginResponse = new LoginResponse();
         loginResponse.setToken(null);

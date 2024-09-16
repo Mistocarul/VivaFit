@@ -21,8 +21,11 @@ import java.util.concurrent.ThreadLocalRandom;
 public class EmailService {
     private User user;
     private int code;
-    private boolean whatSituation;
+    private int whatSituation;
     private String resetLink;
+    private String ipAdress;
+    private String userAgent;
+    private String device;
 
     @Value("${sendgrid.api.key}")
     private String sendgridApiKey;
@@ -30,6 +33,8 @@ public class EmailService {
     private String sendgridTemplateId1;
     @Value("${sendgrid.template.id2}")
     private String sendgridTemplateId2;
+    @Value("${sendgrid.template.id3}")
+    private String sendgridTemplateId3;
     @Value("${sendgrid.from.email}")
     private String fromEmail;
 
@@ -41,7 +46,7 @@ public class EmailService {
         Mail mail = new Mail();
         mail.setFrom(from);
 
-        if(whatSituation){
+        if(whatSituation == 0){
             code = ThreadLocalRandom.current().nextInt(100000, 1000000);
             Personalization personalization = new Personalization();
             personalization.addTo(to);
@@ -52,7 +57,7 @@ public class EmailService {
             personalization.addDynamicTemplateData("code", String.valueOf(code));
             mail.addPersonalization(personalization);
         }
-        else{
+        else if(whatSituation == 1){
             Personalization personalization = new Personalization();
             personalization.addTo(to);
 
@@ -62,6 +67,19 @@ public class EmailService {
             personalization.addDynamicTemplateData("resetLink", resetLink);
             mail.addPersonalization(personalization);
         }
+        else if (whatSituation == 2){
+            Personalization personalization = new Personalization();
+            personalization.addTo(to);
+
+            mail.setTemplateId(sendgridTemplateId3);
+
+            personalization.addDynamicTemplateData("username", user.getUsername());
+            personalization.addDynamicTemplateData("ipAdress", ipAdress);
+            personalization.addDynamicTemplateData("userAgent", userAgent);
+            personalization.addDynamicTemplateData("device", device);
+            mail.addPersonalization(personalization);
+        }
+
 
         SendGrid sendGrid = new SendGrid(sendgridApiKey);
         Request request = new Request();

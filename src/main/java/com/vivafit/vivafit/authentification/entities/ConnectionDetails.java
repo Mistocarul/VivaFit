@@ -25,6 +25,9 @@ public class ConnectionDetails {
     @Column(name = "user_agent", nullable = false, length = 255)
     private String userAgent;
 
+    @Column(name = "device", nullable = false, length = 255)
+    private String device;
+
     @Column(name = "login_time", nullable = false, updatable = false)
     private LocalDateTime loginTime = LocalDateTime.now();
 

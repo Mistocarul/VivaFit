@@ -13,21 +13,22 @@ public class ConnectionDetailsService {
     @Autowired
     private ConnectionDetailsRepository connectionDetailsRepository;
 
-    public void saveConnectionDetails(User user, String ipAddress, String userAgent) {
+    public void saveConnectionDetails(User user, String ipAddress, String userAgent, String device) {
         ConnectionDetails connectionDetails = new ConnectionDetails();
         connectionDetails.setUser(user);
         connectionDetails.setIpAddress(ipAddress);
         connectionDetails.setUserAgent(userAgent);
+        connectionDetails.setDevice(device);
         connectionDetailsRepository.save(connectionDetails);
     }
 
-    public boolean isDifferentConnection(User user, String ipAddress, String userAgent) {
+    public boolean isDifferentConnection(User user, String ipAddress, String userAgent, String device) {
         List<ConnectionDetails> connections = connectionDetailsRepository.findAllByUser(user);
         if(connections == null) {
             return true;
         }
         for(ConnectionDetails connection : connections) {
-            if(connection.getIpAddress().equals(ipAddress) && connection.getUserAgent().equals(userAgent)) {
+            if(connection.getIpAddress().equals(ipAddress) && connection.getUserAgent().equals(userAgent) && connection.getDevice().equals(device)) {
                 return false;
             }
         }
