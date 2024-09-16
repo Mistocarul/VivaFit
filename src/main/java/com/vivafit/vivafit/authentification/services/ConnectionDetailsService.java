@@ -22,6 +22,18 @@ public class ConnectionDetailsService {
         connectionDetailsRepository.save(connectionDetails);
     }
 
+    public void deleteConnectionDetails(String id) {
+        connectionDetailsRepository.deleteById(Long.valueOf(id));
+    }
+
+    public void deleteConnectionDetails(User user) {
+        connectionDetailsRepository.deleteAllByUser(user);
+    }
+
+    public List<ConnectionDetails> getAllConnectionsForUser(User user) {
+        return connectionDetailsRepository.findAllByUser(user);
+    }
+
     public boolean isDifferentConnection(User user, String ipAddress, String userAgent, String device) {
         List<ConnectionDetails> connections = connectionDetailsRepository.findAllByUser(user);
         if(connections == null) {

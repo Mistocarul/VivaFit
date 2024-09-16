@@ -28,6 +28,14 @@ public class RegisterUserDto {
     )
     private String password;
 
+    @NotEmpty(message = "Confirm password is required")
+    @Size(min = 8, message = "Password must be at least 8 characters long")
+    @Pattern(
+            regexp = "^(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{8,}$",
+            message = "Password must contain at least one uppercase letter, one digit, and one special character"
+    )
+    private String confirmPassword;
+
     @NotEmpty(message = "Email is required")
     @Email(message = "The email address is invalid.", flags = { Pattern.Flag.CASE_INSENSITIVE })
     private String email;

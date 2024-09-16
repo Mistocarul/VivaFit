@@ -60,26 +60,6 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    @DeleteMapping("/delete-user")
-    public ResponseEntity<GeneralApiResponse> deleteUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
-            throw new InvalidTokenException("Invalid token");
-        }
-        String jwtToken = authorizationHeader.substring(7);
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        String existingToken = signInTokenService.getToken(currentUser);
-        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
-            userService.deleteUser(currentUser);
-        }
-        else{
-            throw new InvalidTokenException("Invalid token");
-        }
-        SecurityContextHolder.clearContext();
-        GeneralApiResponse response = new GeneralApiResponse("User deleted successfully");
-        return ResponseEntity.ok(response);
-    }
-
     @PutMapping("/update-user")
     public ResponseEntity<UpdateUserResponse> updateUser(@ModelAttribute UpdateUserInformationsDto updateUserInformationsDto,
                                                          @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {

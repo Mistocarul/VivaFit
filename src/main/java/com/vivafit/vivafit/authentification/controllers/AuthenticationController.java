@@ -1,6 +1,7 @@
 package com.vivafit.vivafit.authentification.controllers;
 
 import com.vivafit.vivafit.authentification.dto.*;
+import com.vivafit.vivafit.authentification.entities.ConnectionDetails;
 import com.vivafit.vivafit.authentification.entities.PendingSignInUser;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
@@ -20,6 +21,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @RequestMapping("/api/auth")
 @RestController
@@ -254,5 +256,70 @@ public class AuthenticationController {
         generalApiResponse.setMessage("Password reset successfully");
         return ResponseEntity.ok(generalApiResponse);
     }
+
+    @DeleteMapping("/delete-account")
+    public ResponseEntity<GeneralApiResponse> deleteAccount(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) authentication.getPrincipal();
+        String existingToken = signInTokenService.getToken(user);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, user) && jwtToken.equals(existingToken)) {
+            signInTokenService.unregisterToken(user);
+        }
+        else{
+            throw new InvalidTokenException("Invalid token");
+        }
+        authenticationService.deleteAccount(user);
+        connectionDetailsService.deleteConnectionDetails(user);
+        SecurityContextHolder.clearContext();
+        GeneralApiResponse generalApiResponse = new GeneralApiResponse();
+        generalApiResponse.setMessage("User account deleted successfully");
+        return ResponseEntity.ok(generalApiResponse);
+    }
+
+    @DeleteMapping("/delete-connection-details")
+    public ResponseEntity<GeneralApiResponse> deleteConnectionDetails(@Valid @RequestBody DeleteConnectionDetailDto deleteConnectionDetailDto,@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) authentication.getPrincipal();
+        String existingToken = signInTokenService.getToken(user);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, user) && jwtToken.equals(existingToken)) {
+            signInTokenService.unregisterToken(user);
+        }
+        else{
+            throw new InvalidTokenException("Invalid token");
+        }
+        String idConnectDetails = deleteConnectionDetailDto.getId();
+        connectionDetailsService.deleteConnectionDetails(idConnectDetails);
+        SecurityContextHolder.clearContext();
+        GeneralApiResponse generalApiResponse = new GeneralApiResponse();
+        generalApiResponse.setMessage("Connection details deleted successfully");
+        return ResponseEntity.ok(generalApiResponse);
+    }
+
+    @GetMapping("/all-connection-details-for-user")
+    public ResponseEntity<List<ConnectionDetails>> allConnectionDetailsForUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) authentication.getPrincipal();
+        String existingToken = signInTokenService.getToken(user);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, user) && jwtToken.equals(existingToken)) {
+            List<ConnectionDetails> connectionDetails = connectionDetailsService.getAllConnectionsForUser(user);
+            return ResponseEntity.ok(connectionDetails);
+        }
+        else{
+            throw new InvalidTokenException("Invalid token");
+        }
+    }
+
 
 }

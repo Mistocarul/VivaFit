@@ -56,6 +56,9 @@ public class AuthenticationService {
     private String resetPasswordLink;
 
     public User registerUser(RegisterUserDto registerUserDto) {
+        if (registerUserDto.getConfirmPassword() == null || !registerUserDto.getPassword().equals(registerUserDto.getConfirmPassword())) {
+            throw new PasswordsDoNotMatchException("Passwords do not match");
+        }
         if (userRepository.existsByUsername(registerUserDto.getUsername())) {
             throw new DataAlreadyExistsException("Username is already taken");
         }
@@ -394,6 +397,10 @@ public class AuthenticationService {
         emailService.setUserAgent(userAgent);
         emailService.setDevice(device);
         emailService.sendEmail();
+    }
+
+    public void deleteAccount(User user){
+        userRepository.delete(user);
     }
 
     public PendingSignUpUser toPendingUser(User user){

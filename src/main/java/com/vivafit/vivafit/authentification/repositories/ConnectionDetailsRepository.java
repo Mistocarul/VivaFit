@@ -10,4 +10,5 @@ import java.util.List;
 @Repository
 public interface ConnectionDetailsRepository extends JpaRepository<ConnectionDetails, Long> {
     List<ConnectionDetails> findAllByUser(User user);
+    void deleteAllByUser(User user);
 }
