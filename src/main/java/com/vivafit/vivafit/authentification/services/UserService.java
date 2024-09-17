@@ -1,9 +1,11 @@
 package com.vivafit.vivafit.authentification.services;
 
 import com.vivafit.vivafit.authentification.dto.UpdateUserInformationsDto;
+import com.vivafit.vivafit.authentification.entities.UpdatesAboutUserInformations;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsException;
 import com.vivafit.vivafit.authentification.exceptions.InvalidFileTypeException;
+import com.vivafit.vivafit.authentification.repositories.UpdatesAboutUserInformationsRepository;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import jakarta.transaction.Transactional;
 import org.hibernate.Hibernate;
@@ -24,6 +26,8 @@ public class UserService {
     private UserRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private UpdatesAboutUserInformationsRepository updatesAboutUserInformationsRepository;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -74,6 +78,14 @@ public class UserService {
             }
             throw new RuntimeException("Current password is incorrect");
         }
+
+        UpdatesAboutUserInformations updatesAboutUserInformations = new UpdatesAboutUserInformations();
+        updatesAboutUserInformations.setUser(currentUser);
+        updatesAboutUserInformations.setOldUsername(currentUser.getUsername());
+        updatesAboutUserInformations.setOldEmail(currentUser.getEmail());
+        updatesAboutUserInformations.setOldPhoneNumber(currentUser.getPhoneNumber());
+        updatesAboutUserInformations.setOldPassword(currentUser.getPassword());
+
         if(updateUserInformationsDto.getNewUsername() != null && !updateUserInformationsDto.getNewUsername().isEmpty()){
             if(userRepository.existsByUsername(updateUserInformationsDto.getNewUsername())){
                 throw new DataAlreadyExistsException("Username is already taken");
@@ -119,6 +131,7 @@ public class UserService {
                 currentUser.setProfilePicture(newProfilePicture);
             }
             currentUser.setUsername(updateUserInformationsDto.getNewUsername());
+            updatesAboutUserInformations.setNewUsername(updateUserInformationsDto.getNewUsername());
         }
         if (updateUserInformationsDto.getNewPassword() != null && !updateUserInformationsDto.getNewPassword().isEmpty()
                 && currentUser.getCreatedWith().equals("OwnMethod")) {
@@ -126,6 +139,7 @@ public class UserService {
                 throw new RuntimeException("You can't change your password because you signed up with Google");
             }
             currentUser.setPassword(passwordEncoder.encode(updateUserInformationsDto.getNewPassword()));
+            updatesAboutUserInformations.setNewPassword(passwordEncoder.encode(updateUserInformationsDto.getNewPassword()));
         }
         if (updateUserInformationsDto.getNewEmail() != null && !updateUserInformationsDto.getNewEmail().isEmpty()
                 && currentUser.getCreatedWith().equals("OwnMethod")) {
@@ -136,12 +150,14 @@ public class UserService {
                 throw new DataAlreadyExistsException("Email is already registered.");
             }
             currentUser.setEmail(updateUserInformationsDto.getNewEmail());
+            updatesAboutUserInformations.setNewEmail(updateUserInformationsDto.getNewEmail());
         }
         if (updateUserInformationsDto.getNewPhoneNumber() != null && !updateUserInformationsDto.getNewPhoneNumber().isEmpty()) {
             if (userRepository.existsByPhoneNumber(updateUserInformationsDto.getNewPhoneNumber())) {
                 throw new DataAlreadyExistsException("Phone number is already registered.");
             }
             currentUser.setPhoneNumber(updateUserInformationsDto.getNewPhoneNumber());
+            updatesAboutUserInformations.setNewPhoneNumber(updateUserInformationsDto.getNewPhoneNumber());
         }
         if (updateUserInformationsDto.getNewProfilePicture() != null && !updateUserInformationsDto.getNewProfilePicture().isEmpty()) {
             try {
@@ -179,6 +195,19 @@ public class UserService {
                 throw new RuntimeException("Failed to upload profile picture", e);
             }
         }
+        if (updateUserInformationsDto.getNewUsername() == null || updateUserInformationsDto.getNewUsername().isEmpty()) {
+            updatesAboutUserInformations.setNewUsername(currentUser.getUsername());
+        }
+        if (updateUserInformationsDto.getNewEmail() == null || updateUserInformationsDto.getNewEmail().isEmpty()) {
+            updatesAboutUserInformations.setNewEmail(currentUser.getEmail());
+        }
+        if (updateUserInformationsDto.getNewPhoneNumber() == null || updateUserInformationsDto.getNewPhoneNumber().isEmpty()) {
+            updatesAboutUserInformations.setNewPhoneNumber(currentUser.getPhoneNumber());
+        }
+        if (updateUserInformationsDto.getNewPassword() == null || updateUserInformationsDto.getNewPassword().isEmpty()) {
+            updatesAboutUserInformations.setNewPassword(currentUser.getPassword());
+        }
+        updatesAboutUserInformationsRepository.save(updatesAboutUserInformations);
         return userRepository.save(currentUser);
     }
 

@@ -5,6 +5,7 @@ import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
 import com.vivafit.vivafit.authentification.responses.UpdateUserResponse;
+import com.vivafit.vivafit.authentification.services.ConnectionDetailsService;
 import com.vivafit.vivafit.authentification.services.JwtService;
 import com.vivafit.vivafit.authentification.services.SignInTokenService;
 import com.vivafit.vivafit.authentification.services.UserService;
@@ -34,6 +35,8 @@ public class UserController {
     private JwtService jwtService;
     @Autowired
     private SignInTokenService signInTokenService;
+    @Autowired
+    private ConnectionDetailsService connectionDetailsService;
 
 
     @GetMapping("/user-informations")
@@ -44,6 +47,7 @@ public class UserController {
         String jwtToken = authorizationHeader.substring(7);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         User currentUser = (User) authentication.getPrincipal();
+        System.out.println("Current user: " + currentUser);
         String existingToken = signInTokenService.getToken(currentUser);
         if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
             return ResponseEntity.ok(currentUser);
@@ -58,6 +62,29 @@ public class UserController {
         List<User> users = new ArrayList<>();
         users = userService.allUsers();
         return ResponseEntity.ok(users);
+    }
+
+    @DeleteMapping("/delete-user")
+    public ResponseEntity<GeneralApiResponse> deleteUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        String existingToken = signInTokenService.getToken(currentUser);
+        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
+            userService.deleteUser(currentUser);
+            signInTokenService.unregisterToken(currentUser);
+            connectionDetailsService.deleteConnectionDetails(currentUser);
+            SecurityContextHolder.clearContext();
+            GeneralApiResponse generalApiResponse = new GeneralApiResponse();
+            generalApiResponse.setMessage("User account deleted successfully");
+            return ResponseEntity.ok(generalApiResponse);
+        }
+        else{
+            throw new InvalidTokenException("Invalid token");
+        }
     }
 
     @PutMapping("/update-user")

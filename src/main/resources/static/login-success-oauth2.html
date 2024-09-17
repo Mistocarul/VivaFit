@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Success</title>
+    <script>
+        window.onload = function() {
+          // Preia tokenul JWT din URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const token = urlParams.get('token');
+
+          if (token) {
+            // Salvează tokenul JWT în localStorage
+            localStorage.setItem('jwtToken', token);
+            alert('Token saved in localStorage!');
+
+            // Așteaptă 5 secunde înainte de redirecționare
+            setTimeout(function() {
+              // Redirecționează utilizatorul către dashboard sau altă pagină
+              window.location.href = '/update.html';
+            }, 5000); // 5000 milisecunde = 5 secunde
+          } else {
+            alert('Token not found!');
+          }
+        };
+    </script>
+</head>
+<body>
+<h1>Login Successful</h1>
+</body>
+</html>

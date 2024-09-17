@@ -10,9 +10,13 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -21,6 +25,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.servlet.view.RedirectView;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -55,6 +60,8 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
     private String OAuth2SuperSecretPassword;
     @Value("${facebook.graph.access.token}")
     private String facebookGraphAccessToken;
+    @Value("${server.link.login-success-oauth2}")
+    private String loginSuccessOAuth2Link;
 
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
@@ -87,7 +94,8 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null && (user.getCreatedWith().equals("GOOGLE") || user.getCreatedWith().equals("FACEBOOK"))){
             user = loginUserWithOAuth2(user);
-            generateJwtTokenForOAuth2(user);
+            String token = generateJwtTokenForOAuth2(user);
+
             return oAuth2User;
         }
         else if (user != null && !user.getCreatedWith().equals("GOOGLE") && !user.getCreatedWith().equals("FACEBOOK")){
@@ -170,7 +178,7 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         userRepository.save(newUser);
 
         loginUserWithOAuth2(newUser);
-        generateJwtTokenForOAuth2(newUser);
+        String token = generateJwtTokenForOAuth2(newUser);
 
         return oAuth2User;
     }
@@ -178,16 +186,16 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
     public User loginUserWithOAuth2(User user){
         String password = OAuth2SuperSecretPassword;
         String username = user.getUsername();
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        username,
-                        password
-                )
-        );
+//        Authentication newAuthentication = authenticationManager.authenticate(
+//                new UsernamePasswordAuthenticationToken(
+//                        username,
+//                        password
+//                )
+//        );
         return user;
     }
 
-    public void generateJwtTokenForOAuth2(User user){
+    public String generateJwtTokenForOAuth2(User user){
         String existingToken = signInTokenService.getToken(user);
         if (existingToken != null && jwtService.isTokenValid(existingToken, user)) {
             signInTokenService.unregisterToken(user);
@@ -196,6 +204,7 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         String token = jwtService.generateToken(user);
         LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(jwtService.getExpirationTime()/1000);
         signInTokenService.registerToken(user, token, expiryDate);
+        return token;
     }
 
     public String getFacebookProfilePicture(String userId) throws IOException {

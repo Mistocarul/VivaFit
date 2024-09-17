@@ -399,9 +399,6 @@ public class AuthenticationService {
         emailService.sendEmail();
     }
 
-    public void deleteAccount(User user){
-        userRepository.delete(user);
-    }
 
     public PendingSignUpUser toPendingUser(User user){
         PendingSignUpUser pendingSignUpUser = new PendingSignUpUser();
