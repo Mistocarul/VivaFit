@@ -1,14 +1,8 @@
 package com.vivafit.vivafit.authentification.services;
 
 import com.vivafit.vivafit.authentification.dto.LoginUserDto;
-import com.vivafit.vivafit.authentification.entities.PasswordResetToken;
-import com.vivafit.vivafit.authentification.entities.PendingSignInUser;
-import com.vivafit.vivafit.authentification.entities.PendingSignUpUser;
-import com.vivafit.vivafit.authentification.entities.ConfirmationCode;
-import com.vivafit.vivafit.authentification.repositories.ConfirmationCodeRepository;
-import com.vivafit.vivafit.authentification.repositories.PasswordResetTokenRepository;
-import com.vivafit.vivafit.authentification.repositories.PendingSignInUserRepository;
-import com.vivafit.vivafit.authentification.repositories.PendingSignUpUserRepository;
+import com.vivafit.vivafit.authentification.entities.*;
+import com.vivafit.vivafit.authentification.repositories.*;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +28,8 @@ public class ConfirmationAuthService {
     private PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired
     private EncryptionDataService encryptionDataService;
+    @Autowired
+    private UserRepository userRepository;
 
     private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
@@ -64,6 +60,20 @@ public class ConfirmationAuthService {
         if (!expiredTokens.isEmpty()){
             passwordResetTokenRepository.deleteAll(expiredTokens);
         }
+        pendingSignInUserRepository.findAll().forEach(pendingSignInUser -> {
+            String identifier = pendingSignInUser.getIdentifier();
+            User user = new User();
+            if(identifier.contains("@")){
+                user = userRepository.findByEmail(identifier).orElse(null);
+            }else{
+                user = userRepository.findByUsername(identifier).orElse(null);
+            }
+            ConfirmationCode confirmationCode = confirmationCodeRepository.findByUsername(user.getUsername());
+            if(confirmationCode != null && Duration.between(confirmationCode.getCreationTime(), now).toMinutes() > 30){
+                confirmationCodeRepository.delete(confirmationCode);
+                pendingSignInUserRepository.delete(pendingSignInUser);
+            }
+        });
     }
 
     public void addPendingSignUpUser(PendingSignUpUser pendingSignUpUser){

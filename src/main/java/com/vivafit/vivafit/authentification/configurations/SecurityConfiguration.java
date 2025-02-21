@@ -28,6 +28,8 @@ public class SecurityConfiguration {
     private JwtAuthenticationFilter jwtAuthenticationFilter;
     @Autowired
     private CustomOAuth2SuccessHandler customOAuth2SuccessHandler;
+    @Autowired
+    private CustomOAuth2FailureHandler customOAuth2FailureHandler;
 
 
     @Bean
@@ -36,17 +38,19 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable()) //dezactiveaza protectia CSRF
                 .cors(withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/contact-us/**").permitAll()
                         .requestMatchers("/register.html", "/login.html", "/confirm.html", "/update.html",
                                 "/login-with-google.html", "/login-success-oauth2.html").permitAll()
                         .requestMatchers("/api/account/all-users").hasAuthority("ADMIN")
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/static/**").permitAll()
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
                         .userInfoEndpoint(userInfo -> userInfo.userService(oAuth2AuthenticationService()))
                         .successHandler(customOAuth2SuccessHandler)
+                        .failureHandler(customOAuth2FailureHandler)
                 )
                 .formLogin(formLogin -> formLogin.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //configureaza managementul sesiunilor sa depinda de JWT

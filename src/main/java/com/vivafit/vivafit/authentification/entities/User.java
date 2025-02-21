@@ -1,6 +1,7 @@
 package com.vivafit.vivafit.authentification.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.vivafit.vivafit.manage_calories.entities.BMRDetails;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -59,6 +60,10 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnore
     private List<ConnectionDetails> connectionDetails;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonIgnore
+    private BMRDetails bmrDetails;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

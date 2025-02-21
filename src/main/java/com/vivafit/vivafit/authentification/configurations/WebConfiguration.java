@@ -14,7 +14,7 @@ public class WebConfiguration {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("*")); //de unde vin requesturile
+        corsConfiguration.setAllowedOriginPatterns(List.of("*")); //de unde vin requesturile
         //corsConfiguration.setAllowedOrigins(List.of("http://localhost:2020")); //de unde vin requesturile
         corsConfiguration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD")); //ce metode sunt permise
         corsConfiguration.setAllowedHeaders(List.of("*")); //ce antete sunt permise

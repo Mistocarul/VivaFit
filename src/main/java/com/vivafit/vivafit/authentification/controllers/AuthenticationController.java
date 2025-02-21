@@ -40,6 +40,8 @@ public class AuthenticationController {
 
     @PostMapping("/signup")
     public ResponseEntity<RegisterResponse> register(@Valid @ModelAttribute RegisterUserDto registerUserDto) {
+        System.out.println(registerUserDto.getProfilePicture());
+
         User user = authenticationService.registerUser(registerUserDto);
         RegisterResponse registerResponse = new RegisterResponse();
         registerResponse.setMessage("Confirmation email sent. Please check your email for further instructions.");
@@ -68,6 +70,7 @@ public class AuthenticationController {
         String username = confirmationCodeDto.getUsername();
         User user = authenticationService.resendEmail(username);
         RegisterResponse registerResponse = new RegisterResponse();
+        registerResponse.setMessage("");
         registerResponse.setMessage("Confirmation email sent. Please check your email for further instructions.");
         registerResponse.setUser(user);
         return ResponseEntity.ok(registerResponse);
@@ -116,12 +119,24 @@ public class AuthenticationController {
         else {
             device = "Desktop";
         }
-
         String identifier = loginUserDto.getIdentifier();
+        String password = loginUserDto.getPassword();
         LoginResponse loginResponse = new LoginResponse();
         User possibleUser = authenticationService.findUserByIdentifier(identifier);
-        if (possibleUser.getCreatedWith().equals("google")) {
-            throw new RuntimeException("User created with Google. Please login with Google");
+        String username = possibleUser.getUsername();
+        if (possibleUser != null && (possibleUser.getCreatedWith().equals("GOOGLE") || possibleUser.getCreatedWith().equals("FACEBOOK"))) {
+            loginResponse.setToken(null);
+            loginResponse.setExpirationTime(0);
+            loginResponse.setUsername(null);
+            loginResponse.setMessage("User created with Google/Facebook. Please login with Google/Facebook.");
+            return ResponseEntity.badRequest().body(loginResponse);
+        }
+        if (!authenticationService.isPasswordCorrect(username, password) || possibleUser == null) {
+            loginResponse.setToken(null);
+            loginResponse.setExpirationTime(0);
+            loginResponse.setUsername(null);
+            loginResponse.setMessage("Invalid username or password");
+            return ResponseEntity.badRequest().body(loginResponse);
         }
         if (connectionDetailsService.isDifferentConnection(possibleUser, ipAddress, userAgent, device)) {
             PendingSignInUser pendingSignInUser = new PendingSignInUser();
@@ -131,6 +146,11 @@ public class AuthenticationController {
             pendingSignInUser.setUser(possibleUser);
             confirmationAuthService.addPendingSignInUser(pendingSignInUser);
             authenticationService.sendEmailForNewBrowser(possibleUser.getUsername());
+            loginResponse.setToken(null);
+            loginResponse.setExpirationTime(0);
+            loginResponse.setUsername(possibleUser.getUsername());
+            loginResponse.setMessage("New browser detected. Please check your email for further instructions.");
+            return ResponseEntity.ok(loginResponse);
         }
         else{
             User user = authenticationService.loginUser(loginUserDto);
@@ -147,12 +167,9 @@ public class AuthenticationController {
             loginResponse.setToken(token);
             loginResponse.setExpirationTime(jwtService.getExpirationTime());
             loginResponse.setUsername(user.getUsername());
+            loginResponse.setMessage("User logged in successfully");
             return ResponseEntity.ok(loginResponse);
         }
-        loginResponse.setToken(null);
-        loginResponse.setExpirationTime(0);
-        loginResponse.setUsername(possibleUser.getUsername());
-        return ResponseEntity.ok(loginResponse);
     }
 
     @PostMapping("/resend-new-browser-email")
@@ -181,6 +198,7 @@ public class AuthenticationController {
             loginResponse.setToken(null);
             loginResponse.setExpirationTime(0);
             loginResponse.setUsername(null);
+            loginResponse.setMessage("Invalid confirmation code");
             return ResponseEntity.badRequest().body(loginResponse);
         }
         String ipAddress = request.getRemoteAddr();
@@ -213,6 +231,7 @@ public class AuthenticationController {
         loginResponse.setToken(token);
         loginResponse.setExpirationTime(jwtService.getExpirationTime());
         loginResponse.setUsername(user.getUsername());
+        loginResponse.setMessage("User logged in successfully");
         return ResponseEntity.ok(loginResponse);
     }
 
@@ -234,6 +253,7 @@ public class AuthenticationController {
         loginResponse.setToken(null);
         loginResponse.setExpirationTime(0);
         loginResponse.setUsername(null);
+        loginResponse.setMessage("Sign in canceled successfully");
         return ResponseEntity.ok(loginResponse);
     }
 

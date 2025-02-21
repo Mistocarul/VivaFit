@@ -9,6 +9,9 @@ import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import com.vivafit.vivafit.authentification.exceptions.PasswordsDoNotMatchException;
 import com.vivafit.vivafit.authentification.repositories.PasswordResetTokenRepository;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
+import com.vivafit.vivafit.manage_calories.entities.BMRDetails;
+import com.vivafit.vivafit.manage_calories.repositories.BMRDetailsRepository;
+import com.vivafit.vivafit.manage_calories.services.BMRDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -45,6 +48,8 @@ public class AuthenticationService {
     private PasswordResetTokenRepository passwordResetTokenRepository;
     @Autowired
     private EncryptionDataService encryptionDataService;
+    @Autowired
+    private BMRDetailsService bmrDetailsService;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -103,10 +108,12 @@ public class AuthenticationService {
                 }
                 String filename = registerUserDto.getUsername() + "-temporal-" + profilePicture.getOriginalFilename();
                 Path filePath = temporalMultipartFolderPath.resolve(filename);
+
+                System.out.println(profilePicture);
+
                 profilePicture.transferTo(filePath.toFile());
                 String temporalMultipartFilePath = filePath.toString();
                 pendingSignUpUser.setProfilePicture(temporalMultipartFilePath);
-                System.out.println("Pending user: " + pendingSignUpUser);
 
             } catch (IOException e) {
                 throw new RuntimeException("Failed to upload profile picture", e);
@@ -207,7 +214,8 @@ public class AuthenticationService {
 
                 User user = toUser(pendingSignUpUser);
                 userRepository.save(user);
-
+                user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+                bmrDetailsService.initializeBMRDetails(user);
                 return user;
             }
         }
@@ -330,6 +338,13 @@ public class AuthenticationService {
                 )
         );
         return user;
+    }
+
+    public boolean isPasswordCorrect(String username, String password){
+        User user = userRepository
+                .findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
+        return passwordEncoder.matches(password, user.getPassword());
     }
 
     public User findUserByIdentifier(String identifier) {

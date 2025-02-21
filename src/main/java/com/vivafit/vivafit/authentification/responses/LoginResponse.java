@@ -9,4 +9,5 @@ public class LoginResponse {
     private String token;
     private long expirationTime;
     private String username;
+    private String message;
 }

@@ -32,12 +32,13 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
         DefaultOAuth2User oAuth2User = (DefaultOAuth2User) authentication.getPrincipal();
+        String redirectUrl = loginSuccessOAuth2Link;
         User currentUser = mapToUserEntity(oAuth2User);
 
         String existingToken = signInTokenService.getToken(currentUser);
-        String redirectUrl = loginSuccessOAuth2Link;
+
         if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser)) {
-            redirectUrl = redirectUrl + existingToken + ".html";
+            redirectUrl = "http://localhost:4200/autentificare?token=" + existingToken + "&username=" + currentUser.getUsername();
         } else {
             throw new InvalidTokenException("Invalid token");
         }

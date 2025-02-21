@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -99,7 +100,7 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
             return oAuth2User;
         }
         else if (user != null && !user.getCreatedWith().equals("GOOGLE") && !user.getCreatedWith().equals("FACEBOOK")){
-            throw new DataAlreadyExistsException("Email already exists");
+            throw new OAuth2AuthenticationException(new OAuth2Error("oauth2_auth_failed"), "Email already exists");
         }
         user = userRepository.findByUsername(name).orElse(null);
         if (user != null){
@@ -186,12 +187,12 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
     public User loginUserWithOAuth2(User user){
         String password = OAuth2SuperSecretPassword;
         String username = user.getUsername();
-//        Authentication newAuthentication = authenticationManager.authenticate(
-//                new UsernamePasswordAuthenticationToken(
-//                        username,
-//                        password
-//                )
-//        );
+        Authentication newAuthentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        username,
+                        password
+                )
+        );
         return user;
     }
 
