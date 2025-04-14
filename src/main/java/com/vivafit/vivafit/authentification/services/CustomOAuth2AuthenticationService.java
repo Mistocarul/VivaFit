@@ -193,6 +193,7 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
                         password
                 )
         );
+        SecurityContextHolder.getContext().setAuthentication(newAuthentication);
         return user;
     }
 

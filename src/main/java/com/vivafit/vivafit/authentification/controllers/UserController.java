@@ -9,6 +9,7 @@ import com.vivafit.vivafit.authentification.services.ConnectionDetailsService;
 import com.vivafit.vivafit.authentification.services.JwtService;
 import com.vivafit.vivafit.authentification.services.SignInTokenService;
 import com.vivafit.vivafit.authentification.services.UserService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -18,14 +19,17 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+@Tag(name = "User", description = "User Controller")
 @RequestMapping("/api/account")
 @RestController
+@Validated
 public class UserController {
     @Autowired
     private UserService userService;

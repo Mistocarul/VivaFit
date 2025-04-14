@@ -16,6 +16,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -328,7 +331,7 @@ public class AuthenticationService {
                     .findByUsername(identifier)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + identifier));
         }
-        if (user.getCreatedWith() != null && !user.getCreatedWith().equals("OwnMethod")){
+        if (user.getCreatedWith() != null && !user.getCreatedWith().equals("OWN_METHOD")){
             throw new RuntimeException("User was created with " + user.getCreatedWith());
         }
         authenticationManager.authenticate(
@@ -337,6 +340,14 @@ public class AuthenticationService {
                         password
                 )
         );
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        user.getUsername(),
+                        password
+                )
+        );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         return user;
     }
 
@@ -367,7 +378,9 @@ public class AuthenticationService {
                 .findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        //passwordResetTokenRepository.deleteByUser(user);
+        if (!Objects.equals(user.getRole(), "USER")){
+            throw new UsernameNotFoundException("User not found with email: " + email);
+        }
         passwordResetTokenRepository.findByUser(user).ifPresent(passwordResetTokenRepository::delete);
         String token = UUID.randomUUID().toString();
         LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(30);

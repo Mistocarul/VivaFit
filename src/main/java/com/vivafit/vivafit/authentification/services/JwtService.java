@@ -1,11 +1,17 @@
 package com.vivafit.vivafit.authentification.services;
 
+import com.vivafit.vivafit.authentification.entities.SignInToken;
+import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +29,9 @@ public class JwtService {
 
     @Value("${authentification.jwt.token-expiration-time}")
     private long jwtExpirationTime;
+
+    @Autowired
+    private SignInTokenService signInTokenService;
 
     private Claims extractAllClaims(String token) {
         return Jwts
@@ -83,5 +92,21 @@ public class JwtService {
 
     public long getExpirationTime() {
         return jwtExpirationTime;
+    }
+
+    public User validateAndGetCurrentUser(String authorizationHeader) {
+        if (authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")) {
+            throw new InvalidTokenException("Invalid token");
+        }
+        String jwtToken = authorizationHeader.substring(7);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User currentUser = (User) authentication.getPrincipal();
+        System.out.println("Current user: " + currentUser);
+        String existingToken = signInTokenService.getToken(currentUser);
+        if (existingToken != null && isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
+            return currentUser;
+        } else {
+            throw new InvalidTokenException("Invalid token");
+        }
     }
 }

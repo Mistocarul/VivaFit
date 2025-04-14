@@ -18,8 +18,8 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
 
+@ToString(exclude = "bmrDetails")
 @Table(name = "users")
 @Entity
 public class User implements UserDetails {

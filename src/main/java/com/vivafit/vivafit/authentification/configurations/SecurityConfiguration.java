@@ -4,6 +4,7 @@ import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import com.vivafit.vivafit.authentification.filters.JwtAuthenticationFilter;
 import com.vivafit.vivafit.authentification.services.CustomOAuth2AuthenticationService;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,6 +46,7 @@ public class SecurityConfiguration {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/static/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        //.requestMatchers("/**").permitAll() // permet accesul la toate celelalte endpoint-uri
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -55,7 +57,15 @@ public class SecurityConfiguration {
                 .formLogin(formLogin -> formLogin.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) //configureaza managementul sesiunilor sa depinda de JWT
                 .authenticationProvider(authenticationProvider)
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            String errorMessage = authException.getMessage(); // extrage mesajul din excepție
+                            response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"" + errorMessage + "\"}");
+                        })
+                );
         return http.build();
     }
 

@@ -8,8 +8,9 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
 
+@Builder
+@ToString(exclude = "user")
 @Table(name = "bmr_details")
 @Entity
 public class BMRDetails {

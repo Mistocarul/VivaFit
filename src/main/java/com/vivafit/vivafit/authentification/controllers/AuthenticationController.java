@@ -10,6 +10,7 @@ import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.authentification.responses.RegisterResponse;
 import com.vivafit.vivafit.authentification.services.*;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Tag(name = "Authentication", description = "Authentication Controller")
 @RequestMapping("/api/auth")
 @RestController
 @Validated
