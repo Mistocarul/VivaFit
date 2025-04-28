@@ -46,7 +46,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/static/**").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        //.requestMatchers("/**").permitAll() // permet accesul la toate celelalte endpoint-uri
+                        .requestMatchers("/api/chat/**").permitAll()
+                        .requestMatchers("/**").permitAll() // permet accesul la toate celelalte endpoint-uri
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
