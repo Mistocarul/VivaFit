@@ -6,6 +6,7 @@ import com.vivafit.vivafit.authentification.exceptions.DataAlreadyExistsExceptio
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import com.vivafit.vivafit.authentification.responses.LoginResponse;
 import com.vivafit.vivafit.manage_calories.services.BMRDetailsService;
+import com.vivafit.vivafit.manage_calories.services.MealTypeService;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -55,6 +56,8 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
     private JwtService jwtService;
     @Autowired
     private BMRDetailsService bmrDetailsService;
+    @Autowired
+    private MealTypeService mealTypeService;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -181,6 +184,7 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         }
         userRepository.save(newUser);
         bmrDetailsService.initializeBMRDetails(newUser);
+        mealTypeService.initializeMealType(user);
 
         loginUserWithOAuth2(newUser);
         String token = generateJwtTokenForOAuth2(newUser);

@@ -12,6 +12,7 @@ import com.vivafit.vivafit.authentification.repositories.UserRepository;
 import com.vivafit.vivafit.manage_calories.entities.BMRDetails;
 import com.vivafit.vivafit.manage_calories.repositories.BMRDetailsRepository;
 import com.vivafit.vivafit.manage_calories.services.BMRDetailsService;
+import com.vivafit.vivafit.manage_calories.services.MealTypeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -53,6 +54,8 @@ public class AuthenticationService {
     private EncryptionDataService encryptionDataService;
     @Autowired
     private BMRDetailsService bmrDetailsService;
+    @Autowired
+    private MealTypeService mealTypeService;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -219,6 +222,7 @@ public class AuthenticationService {
                 userRepository.save(user);
                 user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
                 bmrDetailsService.initializeBMRDetails(user);
+                mealTypeService.initializeMealType(user);
                 return user;
             }
         }

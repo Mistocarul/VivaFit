@@ -3,13 +3,12 @@ package com.vivafit.vivafit.ai.controllers;
 import com.vivafit.vivafit.ai.dto.PredictionRequestDto;
 import com.vivafit.vivafit.ai.responses.PredictionResponse;
 import com.vivafit.vivafit.ai.service.PredictionService;
+import com.vivafit.vivafit.authentification.entities.User;
+import com.vivafit.vivafit.authentification.services.JwtService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Validated
 @RestController
@@ -17,9 +16,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class PredictionController {
     @Autowired
     private PredictionService predictionService;
+    @Autowired
+    private JwtService jwtService;
 
     @PostMapping("/calories")
-    public PredictionResponse predictCalories(@Valid @RequestBody PredictionRequestDto request) {
+    public PredictionResponse predictCalories(@RequestHeader("Authorization") String authorizationHeader, @Valid @RequestBody PredictionRequestDto request) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+
         Boolean aproximateHeartRateInBpm = request.getAproximateHeartRateInBpm();
         Boolean aproximateBodyTemperatureInCelsius = request.getAproximateBodyTemperatureInCelsius();
         String activityLevel = request.getActivityLevel();

@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.LocalDate;
+
 @Getter
 @Setter
 @ToString
@@ -19,7 +21,6 @@ public class ChatRequestDto {
     @Pattern(regexp = "Discutie|AnalizaMancare", message = "Category must be either 'Discutie' or 'AnalizaMancare'")
     private String category;
 
-    private String foodDate;
-
-    private String foodName;
+    private String mealType;
+    private LocalDate mealDate;
 }

@@ -35,11 +35,12 @@ public class AiChatController {
         String token = authorizationHeader.substring(7);
 
         return aiChatService.chatStream(
+                        currentUser,
                         token,
                         chatRequestDto.getPrompt(),
                         chatRequestDto.getCategory(),
-                        chatRequestDto.getFoodDate(),
-                        chatRequestDto.getFoodName())
+                        chatRequestDto.getMealType(),
+                        chatRequestDto.getMealDate())
                 .map(response -> ServerSentEvent.builder(response).build());
     }
 
@@ -50,5 +51,19 @@ public class AiChatController {
         String token = authorizationHeader.substring(7);
         conversationHistoryService.clearConversationHistory(token);
         return new ChatResponse("Conversation history cleared");
+    }
+
+    @PostMapping("/stop-stream")
+    public ChatResponse stopStream(
+            @RequestHeader("Authorization") String authorizationHeader) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        String token = authorizationHeader.substring(7);
+
+        if (conversationHistoryService.isStreamActive(token)) {
+            conversationHistoryService.stopStream(token);
+            return new ChatResponse("Stream stoped successfully.");
+        } else {
+            return new ChatResponse("Stream is not active.");
+        }
     }
 }

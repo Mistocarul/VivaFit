@@ -2,6 +2,8 @@ package com.vivafit.vivafit.authentification.entities;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.vivafit.vivafit.manage_calories.entities.BMRDetails;
+import com.vivafit.vivafit.manage_calories.entities.Meal;
+import com.vivafit.vivafit.manage_calories.entities.MealType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -19,7 +21,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 
-@ToString(exclude = "bmrDetails")
+@ToString(exclude = {"bmrDetails", "mealType", "connectionDetails"})
 @Table(name = "users")
 @Entity
 public class User implements UserDetails {
@@ -64,6 +66,14 @@ public class User implements UserDetails {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
     @JsonIgnore
     private BMRDetails bmrDetails;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonIgnore
+    private MealType mealType;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @JsonIgnore
+    private List<Meal> meals;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
