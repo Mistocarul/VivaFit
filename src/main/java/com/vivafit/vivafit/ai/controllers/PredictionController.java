@@ -29,11 +29,11 @@ public class PredictionController {
 
         if (aproximateHeartRateInBpm == true){
             Double heartRateInBpm = (double) (220 - request.getAge());
-            if ("Usoara".equals(activityLevel)) {
+            if ("Ușoară".equals(activityLevel)) {
                 heartRateInBpm = heartRateInBpm * 0.5;
-            } else if ("Moderata".equals(activityLevel)) {
+            } else if ("Moderată".equals(activityLevel)) {
                 heartRateInBpm = heartRateInBpm * 0.7;
-            } else if ("Intensa".equals(activityLevel)) {
+            } else if ("Intensă".equals(activityLevel)) {
                 heartRateInBpm = heartRateInBpm * 0.85;
             }
             request.setHeartRateInBpm(heartRateInBpm);
@@ -49,11 +49,11 @@ public class PredictionController {
             } else {
                 bodyTemperatureInCelsius = bodyTemperatureInCelsius + 0.6;
             }
-            if ("Usoara".equals(activityLevel)) {
+            if ("Ușoară".equals(activityLevel)) {
                 bodyTemperatureInCelsius = bodyTemperatureInCelsius + 0.3;
-            } else if ("Moderata".equals(activityLevel)) {
+            } else if ("Moderată".equals(activityLevel)) {
                 bodyTemperatureInCelsius = bodyTemperatureInCelsius + 0.5;
-            } else if ("Intensa".equals(activityLevel)) {
+            } else if ("Intensă".equals(activityLevel)) {
                 bodyTemperatureInCelsius = bodyTemperatureInCelsius + 0.7;
             }
             request.setBodyTemperatureInCelsius(bodyTemperatureInCelsius);

@@ -47,7 +47,6 @@ public class AiChatService {
                     .filter(Objects::nonNull)
                     .delayElements(Duration.ofMillis(300))
                     .doOnNext(content -> {
-                        // Adăugăm răspunsul în conversație și trimitem către client
                         conversationHistoryService.addMessageToHistory(token, new AssistantMessage(content));
                         sendSafe(sink, content);
                     })
@@ -79,7 +78,8 @@ public class AiChatService {
     private void errorSafe(FluxSink<String> sink, Throwable e) {
         try {
             if (!sink.isCancelled()) {
-                sink.error(e);
+                //sink.error(e);
+                System.err.println("Error occurred: " + e.getMessage());
             }
         } catch (Exception ex) {
         }
@@ -95,6 +95,7 @@ public class AiChatService {
                     + "Dacă întrebarea nu este legată de nutriție, fitness sau alimentație, răspunde cu exact acest text: \"Îmi pare rău, nu pot răspunde la această întrebare pentru că nu ține de nutriție, fitness sau alimentație.\"";
         } else if ("AnalizaMancare".equalsIgnoreCase(category)) {
             MealAnalizeAiDto mealAnalizeAiDto = mealService.getMealAnalysisForAI(mealDate, mealType, user.getId());
+            System.out.println(mealAnalizeAiDto.toString());
             if (mealAnalizeAiDto == null) {
                 return "Ești un asistent AI specializat în nutriție, fitness și alimentație și te rog să scrii următoarea propoziție fara alte detalii. " +
                         "Îmi pare rău, nu am găsit informații despre masa specificată. Te rog să verifici data și tipul mesei.";

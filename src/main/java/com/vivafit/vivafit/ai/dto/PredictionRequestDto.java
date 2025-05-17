@@ -50,6 +50,6 @@ public class PredictionRequestDto {
     private Boolean aproximateBodyTemperatureInCelsius;
 
     @NotNull(message = "Activity level is required")
-    @Pattern(regexp = "Usoara|Moderata|Intensa", message = "Activity level must be Usoara, Moderata, or Intensa")
+    @Pattern(regexp = "Ușoară|Moderată|Intensă", message = "Activity level must be Ușoară, Moderată, or Intensă")
     private String activityLevel;
 }
