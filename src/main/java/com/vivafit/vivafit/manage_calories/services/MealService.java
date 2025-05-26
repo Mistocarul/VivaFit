@@ -2,9 +2,10 @@ package com.vivafit.vivafit.manage_calories.services;
 
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.repositories.UserRepository;
-import com.vivafit.vivafit.manage_calories.dto.AddFoodInMealRequestDto;
-import com.vivafit.vivafit.manage_calories.dto.MealAnalizeAiDto;
-import com.vivafit.vivafit.manage_calories.dto.MealFoodDetailsDto;
+import com.vivafit.vivafit.manage_calories.dto.*;
+import com.vivafit.vivafit.manage_calories.entities.MealType;
+import com.vivafit.vivafit.manage_calories.repositories.MealTypeRepository;
+import com.vivafit.vivafit.manage_calories.responses.MealDetailsResponse;
 import com.vivafit.vivafit.manage_calories.responses.MealFoodResponse;
 import com.vivafit.vivafit.manage_calories.entities.Food;
 import com.vivafit.vivafit.manage_calories.entities.Meal;
@@ -31,6 +32,8 @@ public class MealService {
     private FoodRepository foodRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private MealTypeRepository mealTypeRepository;
 
     @Transactional
     public MealFoodResponse addFoodInMeal(AddFoodInMealRequestDto request, User user) {
@@ -50,20 +53,43 @@ public class MealService {
 
         double factor = request.getQuantity() / 100;
 
-        MealFood mealFood = MealFood.builder()
-                .meal(meal)
-                .food(food)
-                .quantity(request.getQuantity())
-                .calories(food.getCaloriesPer100g() * factor)
-                .protein(food.getProteinPer100g() * factor)
-                .fat(food.getFatPer100g() * factor)
-                .carbs(food.getCarbsPer100g() * factor)
-                .build();
+        Optional<MealFood> existingMealFoodOpt = meal.getMealFoods().stream()
+                .filter(mf -> mf.getFood().getId().equals(food.getId()))
+                .findFirst();
+
+        MealFood mealFood;
+
+        if (existingMealFoodOpt.isPresent()) {
+            mealFood = existingMealFoodOpt.get();
+            double newQuantity = mealFood.getQuantity() + request.getQuantity();
+            double newFactor = newQuantity / 100;
+
+            mealFood.setQuantity(newQuantity);
+            mealFood.setCalories(Math.round(food.getCaloriesPer100g() * newFactor * 100.0) / 100.0);
+            mealFood.setProtein(Math.round(food.getProteinPer100g() * newFactor * 100.0) / 100.0);
+            mealFood.setFat(Math.round(food.getFatPer100g() * newFactor * 100.0) / 100.0);
+            mealFood.setCarbs(Math.round(food.getCarbsPer100g() * newFactor * 100.0) / 100.0);
+
+        } else {
+            mealFood = MealFood.builder()
+                    .meal(meal)
+                    .food(food)
+                    .quantity(request.getQuantity())
+                    .calories(Math.round(food.getCaloriesPer100g() * factor * 100.0) / 100.0)
+                    .protein(Math.round(food.getProteinPer100g() * factor * 100.0) / 100.0)
+                    .fat(Math.round(food.getFatPer100g() * factor * 100.0) / 100.0)
+                    .carbs(Math.round(food.getCarbsPer100g() * factor * 100.0) / 100.0)
+                    .build();
+
+            meal.getMealFoods().add(mealFood);
+        }
 
         MealFood savedMealFood = mealFoodRepository.save(mealFood);
 
         return MealFoodResponse.builder()
                 .id(savedMealFood.getId())
+                .foodId(food.getId())
+                .mealId(meal.getId())
                 .foodName(food.getName())
                 .quantity(savedMealFood.getQuantity())
                 .calories(savedMealFood.getCalories())
@@ -74,8 +100,110 @@ public class MealService {
     }
 
     @Transactional
+    public void removeFoodFromMeal(RemoveFoodFromMealRequestDto request, User user) {
+        Meal meal = mealRepository.findByDateAndUserAndMealType(request.getDate(), user, request.getMealType())
+                .orElseThrow(() -> new RuntimeException("Meal not found for the given date, meal type, and user."));
+
+        MealFood mealFood = mealFoodRepository.findByMealIdAndFoodId(meal.getId(), request.getFoodId())
+                .orElseThrow(() -> new RuntimeException("Food not found in the specified meal."));
+
+        mealFoodRepository.delete(mealFood);
+    }
+
+    @Transactional
+    public MealFoodResponse updateFoodQuantityFromMeal(UpdateFoodQuantityFromMealRequestDto request, User user) {
+        Meal meal = mealRepository.findByDateAndUserAndMealType(request.getDate(), user, request.getMealType())
+                .orElseThrow(() -> new RuntimeException("Meal not found for the given date, meal type, and user."));
+
+        MealFood mealFood = mealFoodRepository.findByMealIdAndFoodId(meal.getId(), request.getFoodId())
+                .orElseThrow(() -> new RuntimeException("Food not found in the specified meal."));
+
+        Food food = foodRepository.findById(request.getFoodId())
+                .orElseThrow(() -> new RuntimeException("Food not found"));
+
+        double factor = request.getQuantity() / 100;
+
+        mealFood.setQuantity(request.getQuantity());
+        mealFood.setCalories(Math.round(food.getCaloriesPer100g() * factor * 100.0) / 100.0);
+        mealFood.setProtein(Math.round(food.getProteinPer100g() * factor * 100.0) / 100.0);
+        mealFood.setFat(Math.round(food.getFatPer100g() * factor * 100.0) / 100.0);
+        mealFood.setCarbs(Math.round(food.getCarbsPer100g() * factor * 100.0) / 100.0);
+
+        MealFood updatedMealFood = mealFoodRepository.save(mealFood);
+
+        return MealFoodResponse.builder()
+                .id(updatedMealFood.getId())
+                .foodId(food.getId())
+                .mealId(meal.getId())
+                .foodName(food.getName())
+                .quantity(updatedMealFood.getQuantity())
+                .calories(updatedMealFood.getCalories())
+                .protein(updatedMealFood.getProtein())
+                .fat(updatedMealFood.getFat())
+                .carbs(updatedMealFood.getCarbs())
+                .build();
+    }
+
+    @Transactional
+    public List<MealDetailsResponse> getDetailsOfMeals(LocalDate date, User user) {
+        List<Meal> meals = mealRepository.findByDateAndUser(date, user);
+
+        if (meals.isEmpty()) {
+            MealType mealType = mealTypeRepository.findByUser(user)
+                    .orElseThrow(() -> new RuntimeException("Meal type not found for the user."));
+
+            List<String> mealTypes = List.of(
+                    mealType.getMealType1(),
+                    mealType.getMealType2(),
+                    mealType.getMealType3(),
+                    mealType.getMealType4(),
+                    mealType.getMealType5()
+            );
+
+            for (String type : mealTypes) {
+                if (type != null && !type.isEmpty()) {
+                    Meal newMeal = Meal.builder()
+                            .date(date)
+                            .mealType(type)
+                            .user(user)
+                            .mealFoods(new ArrayList<>())
+                            .build();
+                    Meal savedMeal = mealRepository.save(newMeal);
+                    meals.add(savedMeal);
+                }
+            }
+        }
+
+        List<MealDetailsResponse> mealDetailsResponses = new ArrayList<>();
+
+        for (Meal meal : meals) {
+            List<MealFoodResponse> mealFoodResponses = meal.getMealFoods().stream()
+                    .map(mealFood -> MealFoodResponse.builder()
+                            .id(mealFood.getId())
+                            .foodId(mealFood.getFood().getId())
+                            .mealId(meal.getId())
+                            .foodName(mealFood.getFood().getName())
+                            .quantity(mealFood.getQuantity())
+                            .calories(mealFood.getCalories())
+                            .protein(mealFood.getProtein())
+                            .fat(mealFood.getFat())
+                            .carbs(mealFood.getCarbs())
+                            .build())
+                    .toList();
+
+            MealDetailsResponse mealDetailsResponse = MealDetailsResponse.builder()
+                    .mealType(meal.getMealType())
+                    .mealFoods(mealFoodResponses)
+                    .build();
+
+            mealDetailsResponses.add(mealDetailsResponse);
+        }
+
+        return mealDetailsResponses;
+    }
+
+    @Transactional
     public MealAnalizeAiDto getMealAnalysisForAI(LocalDate mealDate, String mealType, Integer userId) {
-        // Căutăm masa în funcție de user, tipul mesei și data mesei
         Optional<Meal> mealOptional = mealRepository.findByDateAndUserAndMealType(mealDate, userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found")), mealType);
 
         if (!mealOptional.isPresent()) {
@@ -83,22 +211,19 @@ public class MealService {
         }
 
         Meal meal = mealOptional.get();
-
-        // Construim lista de MealFoodDetailsDto pentru AI
         List<MealFoodDetailsDto> mealFoodDetails = new ArrayList<>();
         for (MealFood mealFood : meal.getMealFoods()) {
             MealFoodDetailsDto mealFoodDetailsDto = new MealFoodDetailsDto(
-                    mealFood.getFood().getName(), // Numele alimentului
-                    mealFood.getQuantity(), // Cantitatea
-                    mealFood.getCalories(), // Caloriile
-                    mealFood.getProtein(), // Proteinele
-                    mealFood.getFat(), // Grăsimile
-                    mealFood.getCarbs() // Carbohidrații
+                    mealFood.getFood().getName(),
+                    mealFood.getQuantity(),
+                    mealFood.getCalories(),
+                    mealFood.getProtein(),
+                    mealFood.getFat(),
+                    mealFood.getCarbs()
             );
             mealFoodDetails.add(mealFoodDetailsDto);
         }
 
-        // Returnăm DTO-ul cu datele pentru AI
         return new MealAnalizeAiDto(meal.getMealType(), mealFoodDetails);
     }
 }

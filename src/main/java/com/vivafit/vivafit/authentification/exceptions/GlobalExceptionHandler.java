@@ -3,6 +3,8 @@ package com.vivafit.vivafit.authentification.exceptions;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import org.apache.catalina.connector.ClientAbortException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.AccountStatusException;
@@ -11,8 +13,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
 import java.nio.file.AccessDeniedException;
 import java.security.SignatureException;
@@ -162,5 +166,20 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Passwords Do Not Match");
         problemDetail.setProperty("message", exception.getMessage());
         return problemDetail;
+    }
+
+    @ExceptionHandler(ClientAbortException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public void handleClientAbortException(ClientAbortException ex) {
+    }
+
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public void handleAsyncRequestNotUsableException(AsyncRequestNotUsableException ex) {
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public void handleIllegalStateException(IllegalStateException ex) {
     }
 }

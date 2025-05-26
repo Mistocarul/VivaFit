@@ -7,7 +7,6 @@ import com.vivafit.vivafit.ai.service.ConversationHistoryService;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.services.JwtService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;

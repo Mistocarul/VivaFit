@@ -9,7 +9,6 @@ import org.springframework.ai.chat.messages.Message;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.FluxSink;
 
@@ -51,7 +50,10 @@ public class AiChatService {
                         sendSafe(sink, content);
                     })
                     .doOnComplete(() -> completeSafe(sink))
-                    .doOnError(e -> errorSafe(sink, e))
+                    .onErrorResume(e -> {
+                        completeSafe(sink);
+                        return Flux.empty();
+                    })
                     .subscribe();
 
         }, FluxSink.OverflowStrategy.LATEST);
@@ -78,8 +80,6 @@ public class AiChatService {
     private void errorSafe(FluxSink<String> sink, Throwable e) {
         try {
             if (!sink.isCancelled()) {
-                //sink.error(e);
-                System.err.println("Error occurred: " + e.getMessage());
             }
         } catch (Exception ex) {
         }

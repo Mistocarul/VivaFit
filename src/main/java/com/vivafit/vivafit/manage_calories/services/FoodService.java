@@ -33,23 +33,23 @@ public class FoodService {
         return savedFood;
     }
 
-    public Food getFoodByName(String name) {
-        return foodRepository.findByNameIgnoreCase(name).orElse(null);
-    }
-
     public List<Food> getFoodsByName(String name) {
         return foodRepository.findByNameContainingIgnoreCase(name);
     }
 
-    public void deleteFoodByName(String name) {
-        Food food = foodRepository.findByNameIgnoreCase(name).orElse(null);
+    public List<Food> getFoodsByBarcode(String barcode) {
+        return foodRepository.findByBarcodeContainingIgnoreCase(barcode);
+    }
+
+    public void deleteFoodById(Integer id) {
+        Food food = foodRepository.findById(id).orElse(null);
         if (food != null) {
             foodRepository.delete(food);
         }
     }
 
-    public Food updateFood(String name, FoodDto foodDto) {
-        Food food = foodRepository.findByNameIgnoreCase(name).orElse(null);
+    public Food updateFood(FoodDto foodDto) {
+        Food food = foodRepository.findById(foodDto.getId()).orElse(null);
         if (food != null) {
             food.setBarcode(foodDto.getBarcode());
             food.setName(foodDto.getName());

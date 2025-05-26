@@ -10,6 +10,7 @@ import javax.validation.constraints.*;
 @RequiredArgsConstructor
 @AllArgsConstructor
 public class FoodDto {
+    private Integer id;
 
     @NotBlank(message = "Barcode cannot be blank")
     private String barcode;

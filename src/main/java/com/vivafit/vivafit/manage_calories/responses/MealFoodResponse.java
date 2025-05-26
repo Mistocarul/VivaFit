@@ -9,6 +9,8 @@ import lombok.*;
 @Builder
 public class MealFoodResponse {
     private Integer id;
+    private Integer foodId;
+    private Integer mealId;
     private String foodName;
     private Double quantity;
     private Double calories;

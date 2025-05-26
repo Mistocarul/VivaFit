@@ -8,5 +8,6 @@ import java.util.Optional;
 
 public interface FoodRepository extends JpaRepository<Food, Integer> {
     List<Food> findByNameContainingIgnoreCase(String name);
+    List<Food> findByBarcodeContainingIgnoreCase(String barcode);
     Optional<Food> findByNameIgnoreCase(String name);
 }

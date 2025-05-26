@@ -12,6 +12,7 @@ public class WebMvcAsyncConfig implements WebMvcConfigurer {
     @Override
     public void configureAsyncSupport(AsyncSupportConfigurer configurer) {
         configurer.setTaskExecutor(asyncTaskExecutor());
+        configurer.setDefaultTimeout(30000);
     }
 
     public AsyncTaskExecutor asyncTaskExecutor() {
@@ -20,6 +21,9 @@ public class WebMvcAsyncConfig implements WebMvcConfigurer {
         executor.setMaxPoolSize(50);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("AsyncExecutor-");
+        executor.setRejectedExecutionHandler((r, e) -> {
+            System.err.println("Task rejected: " + r.toString());
+        });
         executor.initialize();
         return executor;
     }
