@@ -91,19 +91,8 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ResponseEntity<GeneralApiResponse> logout(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
-            throw new InvalidTokenException("Invalid token");
-        }
-        String jwtToken = authorizationHeader.substring(7);
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User user = (User) authentication.getPrincipal();
-        String existingToken = signInTokenService.getToken(user);
-        if (existingToken != null && jwtService.isTokenValid(existingToken, user) && jwtToken.equals(existingToken)) {
-            signInTokenService.unregisterToken(user);
-        }
-        else{
-            throw new InvalidTokenException("Invalid token");
-        }
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        signInTokenService.unregisterToken(currentUser);
         SecurityContextHolder.clearContext();
         GeneralApiResponse generalApiResponse = new GeneralApiResponse();
         generalApiResponse.setMessage("User logged out successfully");
