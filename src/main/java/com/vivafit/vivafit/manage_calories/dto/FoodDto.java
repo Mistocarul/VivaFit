@@ -24,15 +24,18 @@ public class FoodDto {
     private Double caloriesPer100g;
 
     @NotNull(message = "Protein per 100g cannot be null")
-    @PositiveOrZero(message = "Protein per 100g must be zero or positive")
+    @DecimalMin(value = "0.0", message = "Protein per 100g must be at least 0")
+    @DecimalMax(value = "100.0", message = "Protein per 100g must be at most 100")
     private Double proteinPer100g;
 
     @NotNull(message = "Fat per 100g cannot be null")
-    @PositiveOrZero(message = "Fat per 100g must be zero or positive")
+    @DecimalMin(value = "0.0", message = "Fat per 100g must be at least 0")
+    @DecimalMax(value = "100.0", message = "Fat per 100g must be at most 100")
     private Double fatPer100g;
 
     @NotNull(message = "Carbs per 100g cannot be null")
-    @PositiveOrZero(message = "Carbs per 100g must be zero or positive")
+    @DecimalMin(value = "0.0", message = "Carbs per 100g must be at least 0")
+    @DecimalMax(value = "100.0", message = "Carbs per 100g must be at most 100")
     private Double carbsPer100g;
 
     @Pattern(regexp = "USER|ADMIN", message = "Created by must be either 'USER' or 'ADMIN'")

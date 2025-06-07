@@ -148,17 +148,17 @@ public class MealService {
     public List<MealDetailsResponse> getDetailsOfMeals(LocalDate date, User user) {
         List<Meal> meals = mealRepository.findByDateAndUser(date, user);
 
-        if (meals.isEmpty()) {
+        if (meals.isEmpty() || meals == null) {
             MealType mealType = mealTypeRepository.findByUser(user)
                     .orElseThrow(() -> new RuntimeException("Meal type not found for the user."));
-
-            List<String> mealTypes = List.of(
-                    mealType.getMealType1(),
-                    mealType.getMealType2(),
-                    mealType.getMealType3(),
-                    mealType.getMealType4(),
-                    mealType.getMealType5()
-            );
+            List<String> mealTypes = new ArrayList<>();
+            if (mealType != null) {
+                if (mealType.getMealType1() != null) mealTypes.add(mealType.getMealType1());
+                if (mealType.getMealType2() != null) mealTypes.add(mealType.getMealType2());
+                if (mealType.getMealType3() != null) mealTypes.add(mealType.getMealType3());
+                if (mealType.getMealType4() != null) mealTypes.add(mealType.getMealType4());
+                if (mealType.getMealType5() != null) mealTypes.add(mealType.getMealType5());
+            }
 
             for (String type : mealTypes) {
                 if (type != null && !type.isEmpty()) {
@@ -198,7 +198,6 @@ public class MealService {
 
             mealDetailsResponses.add(mealDetailsResponse);
         }
-
         return mealDetailsResponses;
     }
 

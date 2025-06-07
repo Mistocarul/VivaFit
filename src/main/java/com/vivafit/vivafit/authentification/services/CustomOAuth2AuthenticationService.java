@@ -184,7 +184,7 @@ public class CustomOAuth2AuthenticationService extends DefaultOAuth2UserService 
         }
         userRepository.save(newUser);
         bmrDetailsService.initializeBMRDetails(newUser);
-        mealTypeService.initializeMealType(user);
+        mealTypeService.initializeMealType(newUser);
 
         loginUserWithOAuth2(newUser);
         String token = generateJwtTokenForOAuth2(newUser);
