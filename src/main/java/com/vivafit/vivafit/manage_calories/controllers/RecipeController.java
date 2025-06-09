@@ -45,6 +45,13 @@ public class RecipeController {
         return ResponseEntity.ok(recipeService.searchRecipesByName(name));
     }
 
+    @GetMapping("/get-general-recipes")
+    public ResponseEntity<List<RecipeResponse>> getGeneralRecipes(@RequestParam Integer id,@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        List<RecipeResponse> recipes = recipeService.getGeneralRecipes(id);
+        return ResponseEntity.ok(recipes);
+    }
+
     @GetMapping("/get-by-user")
     public ResponseEntity<List<RecipeResponse>> getRecipesByUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
         User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);

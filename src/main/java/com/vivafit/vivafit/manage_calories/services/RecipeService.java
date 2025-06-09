@@ -112,7 +112,7 @@ public class RecipeService {
 
     public List<RecipeResponse> getRecipesByUser(Integer userId) {
         return recipeRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("No recipes found for the user"))
+                .orElseGet(List::of)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -121,8 +121,8 @@ public class RecipeService {
     public List<RecipeResponse> getMyFavoriteRecipes(Integer userId) {
         return foodFavoriteRepository.findByUserId(userId)
                 .stream()
-                .map(favorite -> recipeRepository.findById(favorite.getFoodId())
-                        .orElseThrow(() -> new RuntimeException("Recipe not found")))
+                .map(favorite -> recipeRepository.findById(favorite.getFoodId()).orElse(null))
+                .filter(recipe -> recipe != null)
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -147,5 +147,16 @@ public class RecipeService {
                         .orElseThrow(() -> new RuntimeException("User not found"))
                         .getUsername())
                 .build();
+    }
+
+    public List<RecipeResponse> getGeneralRecipes(Integer id) {
+        List<Recipe> recipes = recipeRepository.findByIdGreaterThanOrderByIdAsc(id)
+                .stream()
+                .limit(30)
+                .toList();
+
+        return recipes.stream()
+                .map(this::mapToResponse)
+                .toList();
     }
 }
