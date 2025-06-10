@@ -39,6 +39,13 @@ public class RecipeController {
         return ResponseEntity.ok("Recipe deleted successfully");
     }
 
+    @PutMapping("/delete-relation-recipe-user/{id}")
+    public ResponseEntity<?> deleteRelationRecipeUser(@PathVariable Integer id, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        recipeService.deleteRelationRecipeUser(id, currentUser.getId());
+        return ResponseEntity.ok("Relation deleted successfully");
+    }
+
     @GetMapping("/search-by-name")
     public ResponseEntity<List<RecipeResponse>> searchRecipes(@RequestParam String name, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
         User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);

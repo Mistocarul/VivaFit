@@ -7,7 +7,6 @@ import com.vivafit.vivafit.manage_calories.entities.Recipe;
 import com.vivafit.vivafit.manage_calories.repositories.FoodFavoriteRepository;
 import com.vivafit.vivafit.manage_calories.repositories.FoodRepository;
 import com.vivafit.vivafit.manage_calories.repositories.RecipeRepository;
-import com.vivafit.vivafit.manage_calories.responses.FoodResponse;
 import com.vivafit.vivafit.manage_calories.responses.RecipeResponse;
 import lombok.Getter;
 import lombok.Setter;
@@ -158,5 +157,22 @@ public class RecipeService {
         return recipes.stream()
                 .map(this::mapToResponse)
                 .toList();
+    }
+
+    public void deleteRelationRecipeUser(Integer recipeId, Integer userId) {
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found"));
+
+        if (!recipe.getUserId().equals(userId)) {
+            throw new RuntimeException("You do not have permission to delete this relation");
+        }
+
+        Integer adminUserId = userRepository.findFirstByRole("ADMIN")
+                .orElseThrow(() -> new RuntimeException("No user with ADMIN role found"))
+                .getId();
+
+        recipe.setCreatedBy("ADMIN");
+        recipe.setUserId(adminUserId);
+        recipeRepository.save(recipe);
     }
 }
