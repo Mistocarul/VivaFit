@@ -12,7 +12,6 @@ import javax.validation.constraints.*;
 public class FoodDto {
     private Integer id;
 
-    @NotBlank(message = "Barcode cannot be blank")
     private String barcode;
 
     @NotBlank(message = "Name cannot be blank")
@@ -41,4 +40,6 @@ public class FoodDto {
     @Pattern(regexp = "USER|ADMIN", message = "Created by must be either 'USER' or 'ADMIN'")
     @NotBlank(message = "Created by cannot be blank")
     private String createdBy;
+
+    private String userName;
 }

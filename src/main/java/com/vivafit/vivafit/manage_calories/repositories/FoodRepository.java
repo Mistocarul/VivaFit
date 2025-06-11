@@ -10,4 +10,6 @@ public interface FoodRepository extends JpaRepository<Food, Integer> {
     List<Food> findByNameContainingIgnoreCase(String name);
     List<Food> findByBarcodeContainingIgnoreCase(String barcode);
     Optional<Food> findByNameIgnoreCase(String name);
+    Optional<Food> findByBarcodeIgnoreCase(String barcode);
+    Optional<List<Food>> findByUserId(Integer userId);
 }

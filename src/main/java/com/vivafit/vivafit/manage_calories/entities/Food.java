@@ -37,4 +37,7 @@ public class Food {
 
     @Column(name = "created_by", nullable = false, length = 50)
     private String createdBy;
+
+    @Column(name = "user_id", nullable = false)
+    private Integer userId;
 }

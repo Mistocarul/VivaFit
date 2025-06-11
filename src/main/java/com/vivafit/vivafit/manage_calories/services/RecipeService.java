@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 
 @Getter
 @Setter
@@ -40,6 +41,15 @@ public class RecipeService {
         if (recipeRepository.findByNameAndUserId(request.getName(), userId).isPresent()) {
             throw new RuntimeException("Recipe already exists for this user.");
         }
+        String userRole = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"))
+                .getRole();
+        if ("COACH".equals(userRole) || "NUTRITIONIST".equals(userRole) || "USER".equals(userRole)) {
+            request.setCreatedBy("USER");
+        } else if ("ADMIN".equals(userRole)) {
+            request.setCreatedBy("ADMIN");
+        }
+
         String fileName = request.getName() + "_" + userId + ".png";
         String imagePath = uploadFolderRecipesPath + fileName;
         Path filePath = Path.of(imagePath);
@@ -56,6 +66,7 @@ public class RecipeService {
                 .fatPer100g(request.getFatPer100g())
                 .carbsPer100g(request.getCarbsPer100g())
                 .createdBy(request.getCreatedBy())
+                .userId(userId)
                 .build();
         food = foodRepository.save(food);
 
@@ -103,7 +114,8 @@ public class RecipeService {
     }
 
     public List<RecipeResponse> searchRecipesByName(String name) {
-        return recipeRepository.findByNameContainingIgnoreCase(name)
+        return Optional.ofNullable(recipeRepository.findByNameContainingIgnoreCase(name))
+                .orElse(List.of())
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -118,7 +130,8 @@ public class RecipeService {
     }
 
     public List<RecipeResponse> getMyFavoriteRecipes(Integer userId) {
-        return foodFavoriteRepository.findByUserId(userId)
+        return Optional.ofNullable(foodFavoriteRepository.findByUserId(userId))
+                .orElseGet(List::of)
                 .stream()
                 .map(favorite -> recipeRepository.findById(favorite.getFoodId()).orElse(null))
                 .filter(recipe -> recipe != null)
@@ -174,5 +187,20 @@ public class RecipeService {
         recipe.setCreatedBy("ADMIN");
         recipe.setUserId(adminUserId);
         recipeRepository.save(recipe);
+
+        Food food = foodRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Food not found"));
+
+        if (!food.getUserId().equals(userId)) {
+            throw new RuntimeException("You do not have permission to delete this relation");
+        }
+
+        Integer adminUserId2 = userRepository.findFirstByRole("ADMIN")
+                .orElseThrow(() -> new RuntimeException("No user with ADMIN role found"))
+                .getId();
+
+        food.setCreatedBy("ADMIN");
+        food.setUserId(adminUserId2);
+        foodRepository.save(food);
     }
 }
