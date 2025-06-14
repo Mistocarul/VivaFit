@@ -1,6 +1,7 @@
 package com.vivafit.vivafit.authentification.controllers;
 
 import com.vivafit.vivafit.authentification.dto.UpdateUserInformationsDto;
+import com.vivafit.vivafit.authentification.dto.UserDto;
 import com.vivafit.vivafit.authentification.entities.User;
 import com.vivafit.vivafit.authentification.exceptions.InvalidTokenException;
 import com.vivafit.vivafit.authentification.responses.GeneralApiResponse;
@@ -10,6 +11,7 @@ import com.vivafit.vivafit.authentification.services.JwtService;
 import com.vivafit.vivafit.authentification.services.SignInTokenService;
 import com.vivafit.vivafit.authentification.services.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +24,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,21 +47,24 @@ public class UserController {
 
 
     @GetMapping("/user-informations")
-    public ResponseEntity<User> authenticatedUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
-            throw new InvalidTokenException("Invalid token");
-        }
-        String jwtToken = authorizationHeader.substring(7);
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        System.out.println("Current user: " + currentUser);
-        String existingToken = signInTokenService.getToken(currentUser);
-        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
-            return ResponseEntity.ok(currentUser);
-        }
-        else{
-            throw new InvalidTokenException("Invalid token");
-        }
+    public ResponseEntity<UserDto> authenticatedUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        UserDto userDto = new UserDto();
+        userDto.setProfilePicturePath(currentUser.getProfilePicture());
+        userDto.setUsername(currentUser.getUsername());
+        userDto.setPhoneNumber(currentUser.getPhoneNumber());
+        userDto.setNewPassword("");
+        userDto.setCurrentPassword("");
+        return ResponseEntity.ok(userDto);
+    }
+
+    @PutMapping("/update-user-informations")
+    public ResponseEntity<UserDto> updateUserInformations(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader,
+            @Valid @ModelAttribute UserDto userDto) throws IOException {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        UserDto updatedUserDto = userService.updateUserInformations(currentUser, userDto);
+        return ResponseEntity.ok(updatedUserDto);
     }
 
     @GetMapping("/all-users")
@@ -70,56 +76,13 @@ public class UserController {
 
     @DeleteMapping("/delete-user")
     public ResponseEntity<GeneralApiResponse> deleteUser(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
-            throw new InvalidTokenException("Invalid token");
-        }
-        String jwtToken = authorizationHeader.substring(7);
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        String existingToken = signInTokenService.getToken(currentUser);
-        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
-            userService.deleteUser(currentUser);
-            signInTokenService.unregisterToken(currentUser);
-            connectionDetailsService.deleteConnectionDetails(currentUser);
-            SecurityContextHolder.clearContext();
-            GeneralApiResponse generalApiResponse = new GeneralApiResponse();
-            generalApiResponse.setMessage("User account deleted successfully");
-            return ResponseEntity.ok(generalApiResponse);
-        }
-        else{
-            throw new InvalidTokenException("Invalid token");
-        }
-    }
-
-    @PutMapping("/update-user")
-    public ResponseEntity<UpdateUserResponse> updateUser(@ModelAttribute UpdateUserInformationsDto updateUserInformationsDto,
-                                                         @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {
-        if(authorizationHeader == null || !authorizationHeader.startsWith("Bearer ")){
-            throw new InvalidTokenException("Invalid token");
-        }
-        String jwtToken = authorizationHeader.substring(7);
-        userService.validateUserUpdateInformations(updateUserInformationsDto);
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        User updatedUser = userService.updateUserInformation(updateUserInformationsDto, currentUser);
-        String passwordToUse = "";
-        if(updateUserInformationsDto.getNewPassword() != null && !updateUserInformationsDto.getNewPassword().isEmpty()){
-            passwordToUse = updateUserInformationsDto.getNewPassword();
-        } else {
-            passwordToUse = updateUserInformationsDto.getCurrentPassword();
-        }
-        Authentication newAuthentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(updatedUser.getUsername(), passwordToUse)
-        );
-        SecurityContextHolder.getContext().setAuthentication(newAuthentication);
-        String existingToken = signInTokenService.getToken(currentUser);
-        if (existingToken != null && jwtService.isTokenValid(existingToken, currentUser) && jwtToken.equals(existingToken)) {
-            signInTokenService.unregisterToken(currentUser);
-        }
-        String token = jwtService.generateToken(updatedUser);
-        LocalDateTime expiryDate = LocalDateTime.now().plusSeconds(jwtService.getExpirationTime()/1000);
-        signInTokenService.registerToken(updatedUser, token, expiryDate);
-        UpdateUserResponse response = new UpdateUserResponse("User updated successfully", token, jwtService.getExpirationTime(), updatedUser.getUsername());
-        return ResponseEntity.ok(response);
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        userService.deleteUser(currentUser);
+        signInTokenService.unregisterToken(currentUser);
+        connectionDetailsService.deleteConnectionDetails(currentUser);
+        SecurityContextHolder.clearContext();
+        GeneralApiResponse generalApiResponse = new GeneralApiResponse();
+        generalApiResponse.setMessage("User account deleted successfully");
+        return ResponseEntity.ok(generalApiResponse);
     }
 }

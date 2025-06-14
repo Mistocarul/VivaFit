@@ -10,4 +10,5 @@ public class LoginResponse {
     private long expirationTime;
     private String username;
     private String message;
+    private String role;
 }

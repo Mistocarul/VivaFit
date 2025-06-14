@@ -31,9 +31,6 @@ public class UpdateUserInformationsDto {
     )
     private String newPassword;
 
-    @Email(message = "The email address is invalid.", flags = { Pattern.Flag.CASE_INSENSITIVE })
-    private String newEmail;
-
     @Pattern(regexp = "\\+.*", message = "Phone number must start with '+' sign")
     @Size(min = 6, max = 15, message = "Phone number must be between 6 and 15 characters")
     private String newPhoneNumber;

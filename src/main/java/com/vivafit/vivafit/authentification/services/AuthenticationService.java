@@ -13,6 +13,7 @@ import com.vivafit.vivafit.manage_calories.entities.BMRDetails;
 import com.vivafit.vivafit.manage_calories.repositories.BMRDetailsRepository;
 import com.vivafit.vivafit.manage_calories.services.BMRDetailsService;
 import com.vivafit.vivafit.manage_calories.services.MealTypeService;
+import com.vivafit.vivafit.specialist.services.SpecialistService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -56,6 +57,8 @@ public class AuthenticationService {
     private BMRDetailsService bmrDetailsService;
     @Autowired
     private MealTypeService mealTypeService;
+    @Autowired
+    private SpecialistService specialistService;
 
     @Value("${upload.folder.users-photos.path}")
     private String uploadFolderUsersPhotosPath;
@@ -221,8 +224,13 @@ public class AuthenticationService {
                 User user = toUser(pendingSignUpUser);
                 userRepository.save(user);
                 user = userRepository.findByUsername(username).orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
-                bmrDetailsService.initializeBMRDetails(user);
-                mealTypeService.initializeMealType(user);
+                if (user.getRole().equals("USER")) {
+                    bmrDetailsService.initializeBMRDetails(user);
+                    mealTypeService.initializeMealType(user);
+                }
+                if (user.getRole().equals("NUTRITIONIST") || user.getRole().equals("COACH")) {
+                    specialistService.initializeProfile(user.getId());
+                }
                 return user;
             }
         }

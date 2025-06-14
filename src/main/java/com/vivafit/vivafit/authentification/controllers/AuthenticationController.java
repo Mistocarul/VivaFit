@@ -119,6 +119,7 @@ public class AuthenticationController {
             loginResponse.setToken(null);
             loginResponse.setExpirationTime(0);
             loginResponse.setUsername(null);
+            loginResponse.setRole(null);
             loginResponse.setMessage("User created with Google/Facebook. Please login with Google/Facebook.");
             return ResponseEntity.badRequest().body(loginResponse);
         }
@@ -126,6 +127,7 @@ public class AuthenticationController {
             loginResponse.setToken(null);
             loginResponse.setExpirationTime(0);
             loginResponse.setUsername(null);
+            loginResponse.setRole(null);
             loginResponse.setMessage("Invalid username or password");
             return ResponseEntity.badRequest().body(loginResponse);
         }
@@ -140,6 +142,7 @@ public class AuthenticationController {
             loginResponse.setToken(null);
             loginResponse.setExpirationTime(0);
             loginResponse.setUsername(possibleUser.getUsername());
+            loginResponse.setRole(possibleUser.getRole());
             loginResponse.setMessage("New browser detected. Please check your email for further instructions.");
             return ResponseEntity.ok(loginResponse);
         }
@@ -159,6 +162,7 @@ public class AuthenticationController {
             loginResponse.setExpirationTime(jwtService.getExpirationTime());
             loginResponse.setUsername(user.getUsername());
             loginResponse.setMessage("User logged in successfully");
+            loginResponse.setRole(user.getRole());
             return ResponseEntity.ok(loginResponse);
         }
     }
@@ -189,6 +193,7 @@ public class AuthenticationController {
             loginResponse.setToken(null);
             loginResponse.setExpirationTime(0);
             loginResponse.setUsername(null);
+            loginResponse.setRole(null);
             loginResponse.setMessage("Invalid confirmation code");
             return ResponseEntity.badRequest().body(loginResponse);
         }
@@ -222,6 +227,7 @@ public class AuthenticationController {
         loginResponse.setToken(token);
         loginResponse.setExpirationTime(jwtService.getExpirationTime());
         loginResponse.setUsername(user.getUsername());
+        loginResponse.setRole(user.getRole());
         loginResponse.setMessage("User logged in successfully");
         return ResponseEntity.ok(loginResponse);
     }
@@ -244,6 +250,7 @@ public class AuthenticationController {
         loginResponse.setToken(null);
         loginResponse.setExpirationTime(0);
         loginResponse.setUsername(null);
+        loginResponse.setRole(null);
         loginResponse.setMessage("Sign in canceled successfully");
         return ResponseEntity.ok(loginResponse);
     }
