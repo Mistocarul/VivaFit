@@ -7,7 +7,10 @@ import com.vivafit.vivafit.specialist.services.SpecialistService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,5 +44,48 @@ public class SpecialistController {
         User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
         specialistDto.setUserId(currentUser.getId());
         return specialistService.addVisitProfile(specialistDto);
+    }
+
+    @GetMapping("/get-specialists-by-name")
+    public ResponseEntity<Page<SpecialistDto>> getSpecialistsByName(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader,
+            @RequestParam String name,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        Page<SpecialistDto> specialists = specialistService.getSpecialistsByName(name, PageRequest.of(page, size));
+        return ResponseEntity.ok(specialists);
+    }
+
+    @GetMapping("/get-specialists-all")
+    public ResponseEntity<Page<SpecialistDto>> getSpecialists(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        Page<SpecialistDto> specialists = specialistService.getSpecialistsAll(PageRequest.of(page, size));
+        return ResponseEntity.ok(specialists);
+    }
+
+    @GetMapping("/get-specialists-nutritionists")
+    public ResponseEntity<Page<SpecialistDto>> getNutritionists(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        Page<SpecialistDto> nutritionists = specialistService.getSpecialistsNutritionists(PageRequest.of(page, size));
+        return ResponseEntity.ok(nutritionists);
+    }
+
+    @GetMapping("/get-specialists-coaches")
+    public ResponseEntity<Page<SpecialistDto>> getCoaches(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
+        Page<SpecialistDto> coaches = specialistService.getSpecialistsCoaches(PageRequest.of(page, size));
+        return ResponseEntity.ok(coaches);
     }
 }

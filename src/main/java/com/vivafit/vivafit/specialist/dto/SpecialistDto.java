@@ -72,5 +72,4 @@ public class SpecialistDto {
     @Size(max = 500, message = "Another details must not exceed 500 characters")
     private String anotherDetails;
 
-
 }

@@ -9,6 +9,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -148,6 +150,7 @@ public class SpecialistService {
                 .specializations(null)
                 .programs(null)
                 .anotherDetails(null)
+                .numberOfVisits(0)
                 .build();
 
         updatedSpecialist = specialistRepository.save(updatedSpecialist);
@@ -163,5 +166,33 @@ public class SpecialistService {
         existingSpecialist = specialistRepository.save(existingSpecialist);
 
         return mapToDto(existingSpecialist);
+    }
+
+    public Page<SpecialistDto> getSpecialistsAll(Pageable pageable) {
+        return specialistRepository.findAll(pageable)
+                .map(this::mapToDto);
+    }
+
+    public Page<SpecialistDto> getSpecialistsNutritionists(Pageable pageable) {
+        return userRepository.findByRole("NUTRITIONIST", pageable)
+                .map(user -> {
+                    Specialist specialist = specialistRepository.findByUserId(user.getId())
+                            .orElseThrow(() -> new RuntimeException("Specialist not found for user ID: " + user.getId()));
+                    return mapToDto(specialist);
+                });
+    }
+
+    public Page<SpecialistDto> getSpecialistsCoaches(Pageable pageable) {
+        return userRepository.findByRole("COACH", pageable)
+                .map(user -> {
+                    Specialist specialist = specialistRepository.findByUserId(user.getId())
+                            .orElseThrow(() -> new RuntimeException("Specialist not found for user ID: " + user.getId()));
+                    return mapToDto(specialist);
+                });
+    }
+
+    public Page<SpecialistDto> getSpecialistsByName(String name, Pageable pageable) {
+        return specialistRepository.findByNameContainingIgnoreCase(name, pageable)
+                .map(this::mapToDto);
     }
 }

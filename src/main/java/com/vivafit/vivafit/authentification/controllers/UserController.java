@@ -55,6 +55,7 @@ public class UserController {
         userDto.setPhoneNumber(currentUser.getPhoneNumber());
         userDto.setNewPassword("");
         userDto.setCurrentPassword("");
+        userDto.setEmail(currentUser.getEmail());
         return ResponseEntity.ok(userDto);
     }
 
