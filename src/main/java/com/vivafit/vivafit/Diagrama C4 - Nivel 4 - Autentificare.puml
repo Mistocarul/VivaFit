@@ -1,0 +1,91 @@
+@startuml
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam classAttributeFontSize 11
+skinparam Padding 8
+skinparam NodeMargin 50
+skinparam ArrowThickness 0.8
+skinparam ArrowFontSize 11
+skinparam MaxMessageSize 60
+skinparam DefaultTextAlignment center
+skinparam BackgroundColor #FAFAFA
+skinparam PackageBorderColor #333
+skinparam PackageBackgroundColor #F9F9F9
+
+package "Authentification" {
+
+    class User << (U,#FF7700) >> {
+        - Integer id
+        - String profilePicture
+        - String username
+        - String password
+        - String email
+        - String phoneNumber
+        - String role
+        - String createdWith
+        - Date createdAt
+        - Date updatedAt
+    }
+
+    class ConnectionDetails << (C,#00AA00) >> {
+        - Long id
+        - String ipAddress
+        - String userAgent
+        - String device
+        - LocalDateTime loginTime
+    }
+
+    package "Tokens" {
+        class PasswordResetToken << (T,#3399FF) >> {
+            - Long id
+            - String token
+            - LocalDateTime expiryDate
+        }
+
+        class SignInToken << (T,#3399FF) >> {
+            - Long id
+            - String token
+            - LocalDateTime expiryDate
+        }
+
+        class ConfirmationCode << (T,#3399FF) >> {
+            - Long id
+            - String username
+            - int code
+            - LocalDateTime creationTime
+        }
+    }
+
+    package "PendingUsers" {
+        class PendingSignInUser << (P,#FF66CC) >> {
+            - Integer id
+            - String identifier
+            - String password
+            - String rememberBrowser
+        }
+
+        class PendingSignUpUser << (P,#FF66CC) >> {
+            - Integer id
+            - String profilePicture
+            - String username
+            - String password
+            - String email
+            - String phoneNumber
+            - String role
+            - String createdWith
+        }
+    }
+
+    ' Relații cu multiplicități și fără intersectări
+    User "1" -left-> "0..*" ConnectionDetails
+
+    User "1" -down-> "0..1" Tokens.PasswordResetToken
+    User "1" -down-> "0..1" Tokens.SignInToken
+    User "1" -down-> "0..*" Tokens.ConfirmationCode
+
+    User "1" -right-> "0..1" PendingUsers.PendingSignInUser
+    User "1" -left-> "0..1" PendingUsers.PendingSignUpUser
+}
+
+@enduml

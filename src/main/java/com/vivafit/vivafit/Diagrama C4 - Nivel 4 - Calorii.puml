@@ -1,0 +1,127 @@
+@startuml
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam classAttributeFontSize 11
+skinparam Padding 8
+skinparam NodeMargin 40
+skinparam ArrowThickness 0.8
+skinparam ArrowFontSize 11
+skinparam DefaultTextAlignment center
+skinparam BackgroundColor #FAFAFA
+skinparam PackageBorderColor #333
+skinparam PackageBackgroundColor #F9F9F9
+
+package "Gestionare Calorii" {
+
+    class User << (U,#FF7700) >> {
+        - Integer id
+        - String numeUtilizator
+        - String email
+        - String parola
+    }
+
+    ' Detalii BMR
+    class BMRDetails << (D,#00AA00) >> {
+        - Integer id
+        - String gen
+        - Integer varsta
+        - Double inaltime
+        - Double greutate
+        - String nivelActivitate
+        - Integer diferentaCalorii
+        - String obiectiv
+        - Integer calorii
+        - Integer proteine
+        - Integer grasimi
+        - Integer carbohidrati
+    }
+
+    ' Mese si tipuri de mese
+    class Meal << (M,#3399FF) >> {
+        - Integer id
+        - String tipMasa
+        - LocalDate data
+    }
+
+    class MealType << (M,#3399FF) >> {
+        - Integer id
+        - String micDejun
+        - String pranz
+        - String cina
+        - String gustare
+        - String desert
+    }
+
+    ' Alimente si favorite
+    class Food << (F,#9933CC) >> {
+        - Integer id
+        - String codBare
+        - String denumire
+        - Double caloriiPer100g
+        - Double proteinePer100g
+        - Double grasimiPer100g
+        - Double carbohidratiPer100g
+    }
+
+    class FoodFavorite << (F,#9933CC) >> {
+        - Integer id
+        - Integer userId
+        - Integer foodId
+    }
+
+    ' Mese - alimente asociate
+    class MealFood << (F,#9933CC) >> {
+        - Integer id
+        - Double cantitate
+        - Double calorii
+        - Double proteine
+        - Double grasimi
+        - Double carbohidrati
+    }
+
+    ' Retete
+    class Recipe << (R,#FF6699) >> {
+        - Integer id
+        - String denumire
+        - int portii
+        - int timpPreparareMin
+        - int timpGatireMin
+        - int greutateFinala
+        - String instructiuni
+        - String ingrediente
+        - double caloriiPer100g
+        - double proteinePer100g
+        - double grasimiPer100g
+        - double carbohidratiPer100g
+        - String caleImagine
+        - String creatDe
+        - Integer userId
+    }
+
+    ' Relații clare, fără intersectări
+
+    ' Utilizator - detalii BMR
+    User "1" -down-> "0..1" BMRDetails : detalii BMR
+
+    ' Utilizator - mese
+    User "1" -left-> "0..*" Meal : mese
+
+    ' Utilizator - favorite
+    User "1" -right-> "0..*" FoodFavorite : favorite
+
+    ' Utilizator - tipuri mese
+    User "1" -right-> "0..1" MealType : tipuriMese
+
+    ' Utilizator - retete
+    User "1" -down-> "0..*" Recipe : retete
+
+    ' Masa - MealFood
+    Meal "1" -down-> "0..*" MealFood : alimenteMasa
+
+    ' MealFood - Food
+    MealFood "1" -right-> "1" Food : aliment
+
+}
+
+@enduml

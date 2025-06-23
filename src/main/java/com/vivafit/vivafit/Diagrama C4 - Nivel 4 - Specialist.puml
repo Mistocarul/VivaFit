@@ -1,0 +1,59 @@
+@startuml
+skinparam linetype ortho
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam classAttributeFontSize 11
+skinparam Padding 8
+skinparam NodeMargin 40
+skinparam ArrowThickness 0.8
+skinparam ArrowFontSize 11
+skinparam DefaultTextAlignment center
+skinparam BackgroundColor #FAFAFA
+skinparam PackageBorderColor #333
+skinparam PackageBackgroundColor #F9F9F9
+
+package "Specialiști" {
+
+    ' Specialist principal
+    class Specialist << (S,#FF7700) >> {
+        - Integer id
+        - String pozaProfil
+        - Integer userId
+        - String nume
+        - String profesie
+        - String introducere
+        - String linkFacebook
+        - String linkInstagram
+        - String linkYoutube
+        - String email
+        - String telefon
+        - String adresa
+        - String oras
+        - String judet
+        - String despreMine
+        - String experienta
+        - String specializari
+        - String programe
+        - String alteDetalii
+        - Integer nrVizite
+    }
+
+    ' Mesaje trimise către specialiști
+    class MessagesSpecialists << (M,#3399FF) >> {
+        - Integer id
+        - Integer specialistId
+        - Integer userId
+        - String numeCompletUtilizator
+        - String emailUtilizator
+        - String telefonUtilizator
+        - String mesaj
+        - String dataCreare
+    }
+
+    ' Relații clare, cu direcții fără intersectări și etichete în română
+    Specialist "1" -down-> "0..*" MessagesSpecialists : mesaje primite
+
+    User "1" -right-> "0..*" MessagesSpecialists : mesaje trimise
+
+}
+@enduml
