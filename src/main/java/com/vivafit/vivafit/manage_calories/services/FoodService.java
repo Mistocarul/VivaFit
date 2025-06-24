@@ -33,6 +33,10 @@ public class FoodService {
     @Autowired
     private RecipeRepository recipeRepository;
 
+    public Food saveFood(Food food) {
+        return foodRepository.save(food);
+    }
+
     public Food createFood(FoodDto foodDto, Integer userId) {
         Food food = new Food();
         food.setBarcode(foodDto.getBarcode());

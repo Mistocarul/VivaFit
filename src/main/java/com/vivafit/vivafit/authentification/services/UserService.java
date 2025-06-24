@@ -58,10 +58,10 @@ public class UserService {
     }
 
     public UserDto updateUserInformations(User user, UserDto userDto) throws IOException {
-        if (userDto.getCurrentPassword() == null || userDto.getCurrentPassword().isEmpty()) {
+        if ((userDto.getCurrentPassword() == null || userDto.getCurrentPassword().isEmpty()) && userDto.getCreatedWith().equals("OWN_METHOD")) {
             throw new IllegalArgumentException("Current password is required");
         }
-        if (!passwordEncoder.matches(userDto.getCurrentPassword(), user.getPassword())) {
+        if (!passwordEncoder.matches(userDto.getCurrentPassword(), user.getPassword()) && userDto.getCreatedWith().equals("OWN_METHOD")) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
 

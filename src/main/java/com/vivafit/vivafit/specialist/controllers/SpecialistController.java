@@ -42,7 +42,6 @@ public class SpecialistController {
     @PutMapping("/add-visit-profile")
     public SpecialistDto addVisitProfile(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader, @Valid @ModelAttribute SpecialistDto specialistDto) throws IOException {
         User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
-        specialistDto.setUserId(currentUser.getId());
         return specialistService.addVisitProfile(specialistDto);
     }
 

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -14,8 +15,10 @@ public class MessagesSpecialistsService {
     @Autowired
     private MessagesSpecialistRepository messagesSpecialistRepository;
 
-    public List<MessagesSpecialistsDto> getMessagesSpecialists() {
-        return messagesSpecialistRepository.findAll().stream()
+    public List<MessagesSpecialistsDto> getMessagesSpecialists(Integer specialistId) {
+        return Optional.ofNullable(messagesSpecialistRepository.findAllBySpecialistId(specialistId))
+                .orElse(List.of())
+                .stream()
                 .map(this::mapToDto)
                 .collect(Collectors.toList());
     }
@@ -32,11 +35,13 @@ public class MessagesSpecialistsService {
 
     private MessagesSpecialistsDto mapToDto(MessagesSpecialists entity) {
         return new MessagesSpecialistsDto(
+                entity.getId(),
                 entity.getUserId(),
                 entity.getSpecialistId(),
                 entity.getUserCompleteName(),
                 entity.getUserPhoneNumber(),
                 entity.getMessage(),
+                entity.getUserEmail(),
                 entity.getCreatedAt().toString()
         );
     }
@@ -48,6 +53,7 @@ public class MessagesSpecialistsService {
                 .userCompleteName(dto.getUserCompletName())
                 .userPhoneNumber(dto.getUserPhoneNumber())
                 .message(dto.getMessage())
+                .userEmail(dto.getUserEmail())
                 .createdAt(String.valueOf(dto.getCreatedAt() != null ? java.time.LocalDateTime.parse(dto.getCreatedAt()) : java.time.LocalDateTime.now()))
                 .build();
     }

@@ -14,8 +14,12 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Tag(name = "Food", description = "Food Controller")
@@ -44,6 +48,51 @@ public class FoodController {
     public ResponseEntity<List<FoodDto>> getFoodsByName(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader, @PathVariable String name) {
         User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
         List<Food> foods = foodService.getFoodsByName(name);
+
+        if (foods.isEmpty() || foods == null) {
+            String url = "https://world.openfoodfacts.org/cgi/search.pl?search_terms="
+                    + UriUtils.encode(name, StandardCharsets.UTF_8) +
+                    "&search_simple=1&action=process&json=1&page_size=5";
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+            List<Map<String, Object>> products = (List<Map<String, Object>>) response.getBody().get("products");
+            if (!products.isEmpty()) {
+                Map<String, Object> product = products.get(0);
+                Map<String, Object> nutriments = (Map<String, Object>) product.get("nutriments");
+
+                String barcode = (String) product.getOrDefault("code", null);
+                String productName = ((String) product.getOrDefault("product_name", "Unknown"));
+                if (productName.length() > 50) {
+                    productName = productName.substring(0, 50);
+                }
+
+                Double calories = nutriments.get("energy-kcal_100g") != null ?
+                        Double.valueOf(nutriments.get("energy-kcal_100g").toString()) : 0.0;
+
+                Double protein = nutriments.get("proteins_100g") != null ?
+                        Double.valueOf(nutriments.get("proteins_100g").toString()) : 0.0;
+
+                Double fat = nutriments.get("fat_100g") != null ?
+                        Double.valueOf(nutriments.get("fat_100g").toString()) : 0.0;
+
+                Double carbs = nutriments.get("carbohydrates_100g") != null ?
+                        Double.valueOf(nutriments.get("carbohydrates_100g").toString()) : 0.0;
+
+                Food newFood = Food.builder()
+                        .barcode(barcode)
+                        .name(productName)
+                        .caloriesPer100g(calories)
+                        .proteinPer100g(protein)
+                        .fatPer100g(fat)
+                        .carbsPer100g(carbs)
+                        .createdBy("ADMIN")
+                        .userId(13)
+                        .build();
+
+                newFood = foodService.saveFood(newFood);
+                foods = List.of(newFood);
+            }
+        }
 
         List<FoodDto> foodDtos = foods.stream().map(food -> {
             String userName = userRepository.findById(food.getUserId())
@@ -74,9 +123,56 @@ public class FoodController {
     }
 
     @GetMapping("/getFoodsByBarcode/{barcode}")
-    public ResponseEntity<List<FoodDto>> getFoodsByBarcode(@RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader, @PathVariable String barcode) {
+    public ResponseEntity<List<FoodDto>> getFoodsByBarcode(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader,
+            @PathVariable String barcode) {
+
         User currentUser = jwtService.validateAndGetCurrentUser(authorizationHeader);
         List<Food> foods = Optional.ofNullable(foodService.getFoodsByBarcode(barcode)).orElseGet(List::of);
+
+        if (foods.isEmpty()) {
+            String url = "https://world.openfoodfacts.org/api/v0/product/" + barcode + ".json";
+
+            try {
+                RestTemplate restTemplate = new RestTemplate();
+                ResponseEntity<Map> response = restTemplate.getForEntity(url, Map.class);
+
+                if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                    Map<String, Object> productData = (Map<String, Object>) response.getBody().get("product");
+
+                    if (productData != null) {
+                        String productName = (String) productData.getOrDefault("product_name", "Unknown");
+                        if (productName.length() > 50) {
+                            productName = productName.substring(0, 50);
+                        }
+
+                        Map<String, Object> nutriments = (Map<String, Object>) productData.getOrDefault("nutriments", Map.of());
+
+                        double calories = ((Number) nutriments.getOrDefault("energy-kcal_100g", 0)).doubleValue();
+                        double protein = ((Number) nutriments.getOrDefault("proteins_100g", 0)).doubleValue();
+                        double fat = ((Number) nutriments.getOrDefault("fat_100g", 0)).doubleValue();
+                        double carbs = ((Number) nutriments.getOrDefault("carbohydrates_100g", 0)).doubleValue();
+
+                        Food newFood = Food.builder()
+                                .barcode(barcode)
+                                .name(productName)
+                                .caloriesPer100g(calories)
+                                .proteinPer100g(protein)
+                                .fatPer100g(fat)
+                                .carbsPer100g(carbs)
+                                .createdBy("ADMIN")
+                                .userId(currentUser.getId())
+                                .build();
+
+                        newFood = foodService.saveFood(newFood);
+
+                        foods = List.of(newFood);
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         List<FoodDto> foodDtos = foods.stream().map(food -> {
             String userName = userRepository.findById(food.getUserId())
@@ -89,6 +185,7 @@ public class FoodController {
 
         return ResponseEntity.ok(foodDtos);
     }
+
 
     @PutMapping("/delete-relation-food-user/{id}")
     public ResponseEntity<?> deleteRelationFoodUser(@PathVariable Integer id, @RequestHeader(HttpHeaders.AUTHORIZATION) String authorizationHeader) {

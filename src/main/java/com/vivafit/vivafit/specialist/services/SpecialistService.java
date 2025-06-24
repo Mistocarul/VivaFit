@@ -195,4 +195,10 @@ public class SpecialistService {
         return specialistRepository.findByNameContainingIgnoreCase(name, pageable)
                 .map(this::mapToDto);
     }
+
+    public Integer getSpecialistIdByUserId(Integer userId) {
+        return specialistRepository.findByUserId(userId)
+                .map(Specialist::getId)
+                .orElseThrow(() -> new RuntimeException("Specialist not found for user ID: " + userId));
+    }
 }

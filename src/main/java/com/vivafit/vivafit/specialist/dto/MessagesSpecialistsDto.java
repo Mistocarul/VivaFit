@@ -10,10 +10,12 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessagesSpecialistsDto {
+    private Integer id;
     private Integer userId;
     private Integer specialistId;
     private String userCompletName;
     private String userPhoneNumber;
     private String message;
+    private String userEmail;
     private String createdAt;
 }

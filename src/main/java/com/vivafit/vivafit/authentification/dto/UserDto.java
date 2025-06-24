@@ -30,4 +30,6 @@ public class UserDto {
     private String phoneNumber;
 
     private String token;
+
+    private String createdWith;
 }

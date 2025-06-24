@@ -56,6 +56,7 @@ public class UserController {
         userDto.setNewPassword("");
         userDto.setCurrentPassword("");
         userDto.setEmail(currentUser.getEmail());
+        userDto.setCreatedWith(currentUser.getCreatedWith());
         return ResponseEntity.ok(userDto);
     }
 

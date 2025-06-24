@@ -1,16 +1,16 @@
 package com.vivafit.vivafit.specialist.entities;
 
 import jakarta.persistence.*;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
+@Builder
 @Getter
 @Setter
+@NoArgsConstructor
+@AllArgsConstructor
 
 @Table(name = "messages_specialists")
 @Entity
-@Builder
 public class MessagesSpecialists {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
