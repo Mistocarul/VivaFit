@@ -9,6 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -92,9 +94,14 @@ public class WeightService {
     }
 
     public List<Double> getLast30Weights(Integer userId) {
-        return weightRepository.findTop30ByUserIdOrderByDateDesc(userId)
-                .stream()
-                .map(Weight::getValue)
-                .toList();
+        List<Double> weights = new ArrayList<>(
+                weightRepository.findTop30ByUserIdOrderByDateDesc(userId)
+                        .stream()
+                        .map(Weight::getValue)
+                        .toList()
+        );
+
+        Collections.reverse(weights);
+        return weights;
     }
 }
