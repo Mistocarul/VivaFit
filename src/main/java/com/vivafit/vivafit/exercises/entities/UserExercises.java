@@ -39,4 +39,7 @@ public class UserExercises {
 
     @Column(name = "exercise_calories_burned", nullable = false)
     private Double caloriesBurned;
+
+    @Column(name = "exercise_category", nullable = false)
+    private String category;
 }
